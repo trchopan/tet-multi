@@ -1,1 +1,5 @@
-console.log('E2E browser tests are deferred to ticket 012.');
+import { execFileSync } from 'node:child_process';
+
+execFileSync('bunx', ['playwright', 'test'], {
+	stdio: 'inherit',
+});

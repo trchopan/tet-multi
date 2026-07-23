@@ -68,6 +68,7 @@ export const getVisibleCellRect = (
 	x: number,
 	y: number,
 ): VisibleCellRect | undefined => {
+	if (!Number.isInteger(x) || !Number.isInteger(y)) return undefined;
 	if (
 		x < 0 ||
 		x >= BOARD_WIDTH ||

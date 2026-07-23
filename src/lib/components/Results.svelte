@@ -22,7 +22,12 @@
 	const isHost = $derived(snapshot.hostPlayerId === localPlayerId);
 </script>
 
-<section class="results" aria-labelledby="results-title">
+<section
+	class="results"
+	aria-labelledby="results-title"
+	data-results-match-id={snapshot.matchId}
+	data-winner-player-ids={snapshot.winnerPlayerIds?.join(',') ?? ''}
+>
 	<p class="eyebrow">Match finished</p>
 	<p class="connection" role="status" aria-live="polite">
 		{connectionState === 'connected'

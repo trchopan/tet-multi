@@ -44,7 +44,7 @@ const websocket = createWebSocketHandlers(roomManager, {
 });
 
 const server = Bun.serve({
-	fetch: (request, currentServer) => {
+	fetch: async (request, currentServer) => {
 		if (
 			new URL(request.url).pathname === '/ws' &&
 			request.headers.get('upgrade')?.toLowerCase() === 'websocket'
@@ -66,6 +66,20 @@ const server = Bun.serve({
 			return upgraded
 				? undefined
 				: new Response('WebSocket upgrade failed', { status: 400 });
+		}
+		if (
+			config.nodeEnv === 'test' &&
+			request.method === 'POST' &&
+			new URL(request.url).pathname === '/__test__/top-out'
+		) {
+			const body = (await request.json()) as { roomCode?: unknown };
+			if (typeof body.roomCode !== 'string')
+				return new Response('Invalid test fixture', { status: 400 });
+			const room = roomManager.get(body.roomCode);
+			if (room === undefined)
+				return new Response('Room not found', { status: 404 });
+			room.forceTestTopOut();
+			return new Response(null, { status: 204 });
 		}
 		return createHttpHandler(config.staticRoot)(request);
 	},

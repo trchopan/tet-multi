@@ -1,0 +1,10 @@
+.git
+.svelte-kit
+build
+node_modules
+.ticket-runs
+e2e
+Dockerfile
+README.md
+SPEC.md
+AGENTS.md

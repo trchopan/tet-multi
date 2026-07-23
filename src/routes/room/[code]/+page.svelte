@@ -94,7 +94,11 @@
 			connectionState={session.connectionState}
 		/>
 	{:else}
-		<section class="play-shell" aria-label="Neon Drop match">
+		<section
+			class="play-shell"
+			aria-label="Neon Drop match"
+			data-match-id={session.snapshot.matchId}
+		>
 			<header class="match-header">
 				<div>
 					<p class="eyebrow">Room {code}</p>

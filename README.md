@@ -2,8 +2,9 @@
 
 Neon Drop is a browser-based falling-block game built as one Bun process with
 a static SvelteKit client. The multiplayer server and deterministic game
-engine are being added incrementally; this foundation currently serves the
-static application shell and health endpoint.
+engine run in one deployable process. The client supports room creation, lobby
+flow, authoritative multiplayer snapshots, reconnection, prediction, and match
+results.
 
 ## Setup
 
@@ -17,6 +18,14 @@ Install dependencies and run the checks:
 bun install --frozen-lockfile
 bun run verify
 ```
+
+Run the browser suite independently with:
+
+```bash
+bun run test:e2e
+```
+
+The first run may require `bunx playwright install chromium`.
 
 Build and run the production artifact:
 
@@ -41,9 +50,40 @@ frontend is available at `http://localhost:5173` and proxies `/health` and
 - `src/shared` will contain contracts shared by the client and server.
 - `static` contains original static assets.
 
+## Local Controls
+
+Focus the game board, then use the following controls:
+
+- Left / A and Right / D: move
+- Down / S: soft drop
+- Space / W: hard drop
+- Up / X: rotate clockwise
+- Z / Q: rotate counterclockwise
+- C / Shift: hold
+
 The production build uses SvelteKit's static adapter with `index.html` as the
-SPA fallback. The Bun server serves that artifact, applies cache policy, and
-reserves `/ws` for the later native WebSocket implementation.
+SPA fallback. The Bun server serves that artifact and the native `/ws` room
+lobby endpoint from one process.
+
+Run the deterministic synthetic load check with:
+
+```bash
+bun run test:performance
+```
+
+It advances 50 six-player rooms for 600 fixed ticks in one Bun process. The
+check fails if average global tick work reaches 8 ms or a six-player snapshot
+reaches 20 KiB. It also reports aggregate outbound traffic for all six clients;
+the current measurement is approximately 642 KiB/s per room, above the SPEC's
+approximate 400 KiB/s target, because each full snapshot is sent to six clients.
+Results are machine-dependent and printed as JSON.
+
+An optional non-root container is available:
+
+```bash
+docker build -t neon-drop .
+docker run --rm -p 3000:3000 -e ALLOWED_ORIGINS=http://localhost:3000 neon-drop
+```
 
 ## Implementation Decisions
 
@@ -71,12 +111,58 @@ reserves `/ws` for the later native WebSocket implementation.
   deterministic hole per packet. Pure match rules use an explicit room PRNG for
   target selection, retarget delayed attacks when needed, and assign stable
   elimination placements with same-tick draws.
+- Local browser sessions create a seed with `crypto.randomUUID`; the engine
+  remains deterministic for any explicit seed used by tests or future replays.
+- The local client advances the engine at 60 fixed ticks per second with a
+  250ms elapsed-time clamp. Canvas rendering displays only the 20 visible rows,
+  while the four hidden spawn rows remain engine-only.
+- Canvas sizing uses `ResizeObserver` and device-pixel-ratio backing dimensions.
+  Browser listeners, observers, and animation frames are disposed when the
+  board component unmounts.
+- Room state is held in memory by `RoomManager`; room codes use the specified
+  alphabet and reconnect tokens use 128 bits of cryptographic randomness.
+- Matches are simulated by one process-wide fixed-timestep scheduler at 60 Hz.
+  Each room owns one authoritative engine per player, accepts only sequenced
+  actions, and broadcasts ordinary playing snapshots at 20 Hz.
+- Room lifecycle tests use injected clocks, IDs, seeds, tokens, and sockets so
+  countdowns, grace expiry, host migration, and cleanup remain deterministic.
+- WebSocket upgrades reject unconfigured origins in production, and malformed
+  or excessively frequent messages are closed without exposing server errors.
+- Server configuration is parsed and validated once at startup. Production
+  logs are structured JSON with token and address fields redacted; development
+  logs remain readable. WebSocket upgrades use per-IP connection limits and
+  room creation uses a separate sliding-window limit.
+- Outbound snapshots use a bounded replaceable slot per socket while critical
+  control messages are retained in a capped queue. Persistent congestion closes
+  the client cleanly rather than allowing unbounded memory growth.
+- The fixed scheduler reports excessive lag, and SIGINT/SIGTERM stop new joins,
+  stop simulation, close active sockets, and stop the Bun server.
+- The multiplayer client keeps WebSocket/session state outside visual
+  components, stores reconnect tokens by room code, retries transient
+  disconnects with bounded exponential backoff, and uses authoritative
+  snapshots for lobby, countdown, boards, and results. Local prediction is
+  limited to active-piece movement and is rebuilt from acknowledged snapshots;
+  scoring, garbage, and match outcomes remain server-owned. Opponent pieces
+  interpolate between recent snapshots and snap for discrete events. Ping/pong
+  samples provide informational latency and lowest-RTT clock-offset estimates.
 
 ## Current Limitations
 
-The current phase does not yet include rooms, WebSockets, keyboard controls, or
-Canvas rendering. Server integration of the pure match rules remains deferred to
-ticket 008.
+- The performance harness measures deterministic room update and JSON snapshot
+  work, not browser rendering FPS or physical-network bandwidth. Aggregate
+  six-client snapshot traffic currently exceeds the approximate SPEC target and
+  remains a documented optimization item.
+- Docker image verification depends on Docker being installed in the execution
+  environment.
 
-Browser-based E2E tests are deferred to ticket 012; `bun run test:e2e` exits
-successfully with that status until those tests are introduced.
+## Release Verification
+
+`bun run verify` performs formatting, type checks, Svelte checks, unit tests,
+the production build, Playwright browser tests, and static production artifact
+checks. Browser tests use two isolated contexts against the real Bun process
+and cover create, join, ready, start, input propagation, reconnect, scripted
+game completion, winner agreement, and host return-to-lobby.
+
+The E2E completion path uses a deterministic test-only top-out fixture route
+that is registered only under `NODE_ENV=test`; it is not part of the public
+protocol and is unavailable in production.

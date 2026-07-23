@@ -511,6 +511,16 @@ export class Room {
 		this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot() });
 	}
 
+	/** Test-only fixture hook; production HTTP never exposes this method. */
+	forceTestTopOut(): void {
+		const player = this.players.find(
+			(session) => session.matchState !== 'eliminated',
+		);
+		if (this.phase !== 'playing' || player === undefined) return;
+		const engine = this.engines.get(player.playerId);
+		if (engine !== undefined) engine.gameOver = true;
+	}
+
 	private requireSession(playerId: string): Session {
 		const session = this.sessions.get(playerId);
 		if (session === undefined) throw new RoomError('NOT_JOINED');
