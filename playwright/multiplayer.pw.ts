@@ -58,7 +58,12 @@ test('two browser contexts complete a synchronized match and return to lobby', a
 		const guestBoards = guestPage.locator('canvas');
 		await expect(hostBoards).toHaveCount(2);
 		await expect(guestBoards).toHaveCount(2);
+		const initialX = await hostBoards.first().getAttribute('data-active-x');
 		await hostBoards.first().press('ArrowRight');
+		await expect(hostBoards.first()).not.toHaveAttribute(
+			'data-active-x',
+			initialX ?? '',
+		);
 		await guestPage.close();
 		const reconnectedGuestPage = await guest.newPage();
 		await reconnectedGuestPage.goto(`/room/${code}`);

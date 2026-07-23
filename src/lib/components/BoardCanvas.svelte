@@ -19,6 +19,7 @@
 	} = $props();
 	let canvas: HTMLCanvasElement;
 	let metrics = $state<CanvasMetrics>(getCanvasMetrics(0));
+	let input: KeyboardInput | undefined;
 
 	onMount(() => {
 		const context = canvas.getContext('2d');
@@ -41,18 +42,24 @@
 				0,
 			);
 		};
-		const input =
-			local && onInput !== undefined
-				? new KeyboardInput(canvas, onInput)
-				: undefined;
 		const observer = new ResizeObserver(resize);
 		observer.observe(canvas);
 		resize();
-		if (local) canvas.focus();
 
 		return () => {
 			observer.disconnect();
+		};
+	});
+
+	$effect(() => {
+		if (canvas === undefined || !local || onInput === undefined) return;
+		input?.dispose();
+		input = new KeyboardInput(canvas, onInput);
+		canvas.focus();
+
+		return () => {
 			input?.dispose();
+			input = undefined;
 		};
 	});
 
@@ -66,6 +73,7 @@
 <canvas
 	bind:this={canvas}
 	tabindex={local ? 0 : -1}
+	data-active-x={player.activePiece?.x ?? ''}
 	aria-label={`${player.displayName}'s ${player.matchState} board`}
 ></canvas>
 
