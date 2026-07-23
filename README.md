@@ -64,15 +64,17 @@ reserves `/ws` for the later native WebSocket implementation.
 - Engine coordinates use the internal 10 x 24 board directly: rows 0-3 are
   hidden spawn rows and rows 4-23 are visible. Board serialization is a copied
   row-major number array, and engine hashes use canonical JSON with FNV-1a.
-- SRS rotation, timed locking, scoring, garbage, and gameplay UI remain
-  deferred to their dependent tickets.
+- SRS rotation uses standard JLSTZ and I kick tables, while O remains visually
+  stable. The pure engine owns fixed-tick gravity, lock delay, hold, preview,
+  line clearing, scoring, combo, back-to-back, T-spin, and perfect-clear state.
+- Garbage attacks and gameplay UI remain deferred to their dependent tickets;
+  scoring exposes the calculated attack amount without applying network garbage.
 
 ## Current Limitations
 
-The current phase does not yet include rooms, WebSockets, timed gameplay,
-keyboard controls, or Canvas rendering. The deterministic engine foundation
-supports piece streams, spawning, collision, placement, and horizontal
-movement; full rules are deferred to the next engine ticket.
+The current phase does not yet include rooms, WebSockets, keyboard controls, or
+Canvas rendering. Garbage delivery and network attack targeting remain deferred
+to ticket 005.
 
 Browser-based E2E tests are deferred to ticket 012; `bun run test:e2e` exits
 successfully with that status until those tests are introduced.

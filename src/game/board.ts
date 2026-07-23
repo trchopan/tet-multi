@@ -5,7 +5,7 @@ import {
 	SNAPSHOT_CELL_VALUES,
 } from '../shared/constants';
 import type { PieceKind } from '../shared/types';
-import { getPieceDefinition, pieceValue } from './pieces';
+import { getRotationCells, pieceValue } from './pieces';
 
 export type BoardCell = (typeof SNAPSHOT_CELL_VALUES)[number];
 
@@ -17,6 +17,7 @@ export interface PiecePosition {
 	kind: PieceKind;
 	x: number;
 	y: number;
+	rotation?: 0 | 1 | 2 | 3;
 }
 
 export const isBoardCell = (value: unknown): value is BoardCell =>
@@ -69,8 +70,7 @@ export const setCell = (
 export const pieceCells = (
 	piece: PiecePosition,
 ): ReadonlyArray<{ x: number; y: number }> => {
-	const definition = getPieceDefinition(piece.kind);
-	return definition.spawnCells.map((cell) => ({
+	return getRotationCells(piece.kind, piece.rotation ?? 0).map((cell) => ({
 		x: piece.x + cell.x,
 		y: piece.y + cell.y,
 	}));
@@ -112,3 +112,21 @@ export const serializeBoard = (board: BoardState): number[] => {
 	assertValidBoard(board);
 	return [...board.cells];
 };
+
+export const clearLines = (board: BoardState): number => {
+	const kept: BoardCell[][] = [];
+	let cleared = 0;
+	for (let y = 0; y < BOARD_INTERNAL_HEIGHT; y += 1) {
+		const row = board.cells.slice(y * BOARD_WIDTH, (y + 1) * BOARD_WIDTH);
+		if (row.every((cell) => cell !== 0)) cleared += 1;
+		else kept.push(row);
+	}
+	while (kept.length < BOARD_INTERNAL_HEIGHT) {
+		kept.unshift(Array.from({ length: BOARD_WIDTH }, () => 0));
+	}
+	board.cells = kept.flat();
+	return cleared;
+};
+
+export const isBoardEmpty = (board: BoardState): boolean =>
+	board.cells.every((cell) => cell === 0);

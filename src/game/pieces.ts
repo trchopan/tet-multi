@@ -17,6 +17,51 @@ export interface PieceDefinition {
 	spawnCells: readonly PieceCell[];
 }
 
+export const getRotationCells = (
+	kind: PieceKind,
+	rotation: PieceRotation,
+): readonly PieceCell[] => {
+	const base = definitions[kind].spawnCells;
+	if (kind === 'O') return base;
+	if (kind === 'I') {
+		return (
+			[
+				[
+					{ x: 0, y: 1 },
+					{ x: 1, y: 1 },
+					{ x: 2, y: 1 },
+					{ x: 3, y: 1 },
+				],
+				[
+					{ x: 2, y: 0 },
+					{ x: 2, y: 1 },
+					{ x: 2, y: 2 },
+					{ x: 2, y: 3 },
+				],
+				[
+					{ x: 0, y: 2 },
+					{ x: 1, y: 2 },
+					{ x: 2, y: 2 },
+					{ x: 3, y: 2 },
+				],
+				[
+					{ x: 1, y: 0 },
+					{ x: 1, y: 1 },
+					{ x: 1, y: 2 },
+					{ x: 1, y: 3 },
+				],
+			][rotation] ?? []
+		);
+	}
+	if (rotation === 0) return base;
+	const cells = base;
+	let current = [...cells];
+	for (let step = 0; step < rotation; step += 1) {
+		current = current.map(({ x, y }) => ({ x: 2 - y, y: x }));
+	}
+	return current;
+};
+
 const definitions: Record<PieceKind, PieceDefinition> = {
 	I: {
 		kind: 'I',

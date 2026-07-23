@@ -9,6 +9,7 @@ import {
 import {
 	boardIndex,
 	canPlacePiece,
+	clearLines,
 	createEmptyBoard,
 	getCell,
 	placePiece,
@@ -52,5 +53,20 @@ describe('board foundation', () => {
 		const board = createEmptyBoard();
 		expect(() => setCell(board, 0, 0, 9 as never)).toThrow();
 		expect(() => serializeBoard({ cells: [0] })).toThrow();
+	});
+
+	test('clears one through four complete rows and compacts the board', () => {
+		for (let count = 1; count <= 4; count += 1) {
+			const board = createEmptyBoard();
+			for (
+				let y = BOARD_INTERNAL_HEIGHT - count;
+				y < BOARD_INTERNAL_HEIGHT;
+				y += 1
+			) {
+				for (let x = 0; x < BOARD_WIDTH; x += 1) setCell(board, x, y, 8);
+			}
+			expect(clearLines(board)).toBe(count);
+			expect(board.cells.every((cell) => cell === 0)).toBe(true);
+		}
 	});
 });
