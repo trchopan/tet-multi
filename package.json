@@ -1,5 +1,5 @@
 {
-	"name": "aidd-tetris-demo",
+	"name": "tet-multi",
 	"private": true,
 	"type": "module",
 	"packageManager": "bun@1.3.5",

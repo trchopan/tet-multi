@@ -1,9 +1,11 @@
+name: tet-multi
+
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: neon-drop
+    container_name: tet-multi
     restart: unless-stopped
     ports:
       - "8780:3000"

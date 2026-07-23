@@ -8,7 +8,7 @@ import type { GameEngineState } from '../../game/engine';
 import type { InputAction } from '../../shared/types';
 
 const createLocalSeed = (): string =>
-	globalThis.crypto?.randomUUID?.() ?? 'neon-drop-local-seed';
+	globalThis.crypto?.randomUUID?.() ?? 'tet-multi-local-seed';
 
 export class LocalGameSession {
 	public state = $state<GameEngineState>(createEngineState(createLocalSeed()));

@@ -22,8 +22,8 @@ import { MultiplayerWebSocket, type ConnectionState } from './websocket';
 type Intent = 'create' | 'join';
 
 const tokenKey = (roomCode: string): string =>
-	`neon-drop:reconnect:${roomCode}`;
-const nameKey = 'neon-drop:display-name';
+	`tet-multi:reconnect:${roomCode}`;
+const nameKey = 'tet-multi:display-name';
 
 const getStored = (key: string): string | undefined => {
 	try {

@@ -1,12 +1,13 @@
-# Neon Drop
+# tet-multi
 
-Neon Drop is a browser-based falling-block game built as one Bun process with
+tet-multi is a browser-based falling-block game built as one Bun process with
 a static SvelteKit client. The multiplayer server and deterministic game
 engine run in one deployable process. The client supports room creation, lobby
 flow, authoritative multiplayer snapshots, reconnection, prediction, and match
 results.
 
-Play the live demo at [tet.chop.dev](https://tet.chop.dev).
+Play the live demo at [tet.chop.dev](https://tet.chop.dev) or view the project on
+[GitHub](https://github.com/trchopan/tet-multi).
 
 ## Setup
 
@@ -83,15 +84,16 @@ Results are machine-dependent and printed as JSON.
 An optional non-root container is available:
 
 ```bash
-docker build -t neon-drop .
-docker run --rm -p 3000:3000 -e ALLOWED_ORIGINS=http://localhost:3000 neon-drop
+docker build -t tet-multi .
+docker run --rm -p 3000:3000 -e ALLOWED_ORIGINS=http://localhost:3000 tet-multi
 ```
 
 ### Docker Compose Deployment
 
 The included Compose file runs the app on port `3000`. Set
 `PUBLIC_BASE_URL` and `ALLOWED_ORIGINS` to the public HTTPS origin used by your
-deployment. The repository's live demo is [tet.chop.dev](https://tet.chop.dev).
+deployment. The repository's live demo is [tet.chop.dev](https://tet.chop.dev),
+and the source code is available on [GitHub](https://github.com/trchopan/tet-multi).
 
 ```bash
 PUBLIC_BASE_URL=https://your-domain.example \

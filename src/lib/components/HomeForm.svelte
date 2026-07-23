@@ -60,7 +60,7 @@
 
 <section class="home-card" aria-labelledby="home-title">
 	<p class="eyebrow">Multiplayer falling-block arena</p>
-	<h1 id="home-title">Neon Drop</h1>
+	<h1 id="home-title">tet-multi</h1>
 	<p class="lede">Build a room, invite your crew, and outlast the stack.</p>
 
 	<label for="display-name">Display name</label>

@@ -68,7 +68,7 @@ The MVP must not include:
 - Replay files
 - Custom rule editors
 - Paid services such as Firebase, Supabase, hosted pub/sub, or managed game backends
-- Pixel-perfect reproduction of any commercial Tetris product
+- Pixel-perfect reproduction of any commercial falling-block product
 
 The game may use familiar falling-block mechanics, but all visual assets, names, sounds, and branding must be original or permissively licensed.
 
@@ -1001,7 +1001,7 @@ The host receives a **Return to lobby** button. Other players see a waiting stat
 ## 23. Visual and audio direction
 
 - Use an original neutral arcade visual style.
-- Do not copy logos, layouts, sound effects, fonts, or branded visual treatments from commercial Tetris products.
+- Do not copy logos, layouts, sound effects, fonts, or branded visual treatments from commercial falling-block products.
 - Tetromino colors must be configurable in one theme module.
 - Sound is optional for the MVP. If included, it must have a mute control and use original or permissively licensed assets.
 

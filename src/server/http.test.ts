@@ -10,7 +10,7 @@ beforeAll(async () => {
 	await mkdir(join(root, 'assets'), { recursive: true });
 	await Bun.write(
 		join(root, 'index.html'),
-		'<!doctype html><main>Neon Drop</main>',
+		'<!doctype html><main>tet-multi</main>',
 	);
 	await Bun.write(join(root, 'assets', 'app.js'), 'console.log("ready");');
 });
@@ -47,7 +47,7 @@ describe('HTTP foundation', () => {
 		const response = await request('/room/ABC123');
 
 		expect(response.status).toBe(200);
-		expect(await response.text()).toContain('Neon Drop');
+		expect(await response.text()).toContain('tet-multi');
 		expect(response.headers.get('cache-control')).toBe('no-cache');
 	});
 
@@ -61,7 +61,7 @@ describe('HTTP foundation', () => {
 		const response = await request('/');
 
 		expect(response.status).toBe(200);
-		expect(await response.text()).toContain('Neon Drop');
+		expect(await response.text()).toContain('tet-multi');
 	});
 
 	test('rejects malformed paths without a server error', async () => {

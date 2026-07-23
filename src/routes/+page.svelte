@@ -20,16 +20,20 @@
 </script>
 
 <svelte:head>
-	<title>Neon Drop | Multiplayer falling-block arena</title>
+	<title>tet-multi | Multiplayer falling-block arena</title>
 	<meta
 		name="description"
-		content="Create or join a Neon Drop multiplayer room."
+		content="Create or join a tet-multi multiplayer room."
 	/>
 </svelte:head>
 
 <main>
 	<HomeForm onCreate={create} onJoin={join} />
 	<p class="status" aria-live="polite">{session.error}</p>
+	<footer class="project-links" aria-label="Project links">
+		<a href="https://tet.chop.dev">tet.chop.dev</a>
+		<a href="https://github.com/trchopan/tet-multi">GitHub</a>
+	</footer>
 </main>
 
 <style>
@@ -55,5 +59,15 @@
 		bottom: 1rem;
 		max-width: 24rem;
 		color: #ff9f9f;
+	}
+	.project-links {
+		position: fixed;
+		left: 1rem;
+		bottom: 1rem;
+		display: flex;
+		gap: 1rem;
+	}
+	.project-links a {
+		color: #c8bfff;
 	}
 </style>

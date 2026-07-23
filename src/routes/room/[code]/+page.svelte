@@ -50,8 +50,8 @@
 </script>
 
 <svelte:head>
-	<title>{code} | Neon Drop</title>
-	<meta name="description" content={`Neon Drop room ${code}`} />
+	<title>{code} | tet-multi</title>
+	<meta name="description" content={`tet-multi room ${code}`} />
 </svelte:head>
 
 <main>
@@ -96,7 +96,7 @@
 	{:else}
 		<section
 			class="play-shell"
-			aria-label="Neon Drop match"
+			aria-label="tet-multi match"
 			data-match-id={session.snapshot.matchId}
 		>
 			<header class="match-header">

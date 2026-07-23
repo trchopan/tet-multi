@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "aidd-tetris-demo",
+      "name": "tet-multi",
       "dependencies": {
         "valibot": "^1.4.2",
       },

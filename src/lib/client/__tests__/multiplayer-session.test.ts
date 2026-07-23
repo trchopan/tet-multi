@@ -36,9 +36,9 @@ describe('multiplayer session helpers', () => {
 				removeItem: (key: string) => values.delete(key),
 			},
 		});
-		values.set('neon-drop:reconnect:ABC234', 'expired');
+		values.set('tet-multi:reconnect:ABC234', 'expired');
 		clearReconnectToken('ABC234');
-		expect(values.has('neon-drop:reconnect:ABC234')).toBe(false);
+		expect(values.has('tet-multi:reconnect:ABC234')).toBe(false);
 		Object.defineProperty(globalThis, 'localStorage', {
 			configurable: true,
 			value: previous,

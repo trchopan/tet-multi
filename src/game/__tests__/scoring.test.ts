@@ -10,7 +10,7 @@ describe('engine scoring rules', () => {
 		expect(scorePlacement(0, 0, 4, false, 'none', false).combo).toBe(-1);
 	});
 
-	test('back-to-back applies to consecutive tetrises and T-spin clears', () => {
+	test('back-to-back applies to consecutive four-line clears and T-spin clears', () => {
 		const first = scorePlacement(4, 0, -1, false, 'none', false);
 		const second = scorePlacement(
 			4,
