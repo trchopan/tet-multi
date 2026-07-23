@@ -108,9 +108,17 @@ export class RoomManager {
 
 	fixedUpdate(now = this.now()): void {
 		for (const [code, room] of [...this.rooms]) {
-			if (room.update(now)) {
+			try {
+				if (room.update(now)) {
+					this.rooms.delete(code);
+					this.logger.info('room_deleted', { roomCode: code });
+				}
+			} catch (error) {
 				this.rooms.delete(code);
-				this.logger.info('room_deleted', { roomCode: code });
+				this.logger.warn('room_update_failed', {
+					roomCode: code,
+					error: error instanceof Error ? error.message : 'unknown',
+				});
 			}
 		}
 	}

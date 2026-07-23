@@ -3,6 +3,7 @@ import { createHttpHandler } from './http.js';
 import { RoomManager } from './room-manager.js';
 import { createWebSocketHandlers, type SocketData } from './websocket.js';
 import { isAllowedOrigin } from './origin.js';
+import { FixedScheduler } from './scheduler.js';
 
 const port = Number.parseInt(process.env.PORT ?? '3000', 10);
 const host = process.env.HOST ?? '0.0.0.0';
@@ -18,6 +19,7 @@ const configuredOrigins = (
 const allowedOrigins = new Set(configuredOrigins);
 const roomManager = new RoomManager();
 const websocket = createWebSocketHandlers(roomManager);
+const scheduler = new FixedScheduler();
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
 	throw new Error('PORT must be an integer between 1 and 65535');
@@ -51,6 +53,6 @@ const server = Bun.serve({
 	websocket,
 });
 
-setInterval(() => roomManager.fixedUpdate(), 1000 / 60);
+setInterval(() => scheduler.advance(roomManager), 1000 / 60);
 
 console.log(`Neon Drop server listening on ${server.url}`);

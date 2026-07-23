@@ -210,7 +210,10 @@ export const applyHorizontalInput = (
 	action: 'move_left' | 'move_right',
 ): boolean => moveHorizontal(state, action === 'move_left' ? -1 : 1);
 
-const lockAndSpawn = (state: GameEngineState): PlacementScore | undefined => {
+const lockAndSpawn = (
+	state: GameEngineState,
+	applyReadyGarbage = true,
+): PlacementScore | undefined => {
 	if (state.gameOver || !canPlacePiece(state.board, state.activePiece))
 		return undefined;
 	const tSpin = detectTSpin(
@@ -236,8 +239,7 @@ const lockAndSpawn = (state: GameEngineState): PlacementScore | undefined => {
 	state.maxCombo = Math.max(state.maxCombo, state.combo);
 	state.backToBack = placement.backToBack;
 	state.lastPlacement = placement;
-	const ready = removeReadyGarbage(state.incomingGarbage, state.currentTick);
-	if (ready.length > 0 && applyGarbagePackets(state.board, ready)) {
+	if (applyReadyGarbage && resolveReadyGarbage(state)) {
 		state.gameOver = true;
 		return placement;
 	}
@@ -252,6 +254,20 @@ const lockAndSpawn = (state: GameEngineState): PlacementScore | undefined => {
 
 export const lockActivePiece = (state: GameEngineState): boolean =>
 	lockAndSpawn(state) !== undefined;
+
+export const resolveReadyGarbage = (state: GameEngineState): boolean => {
+	const ready = removeReadyGarbage(state.incomingGarbage, state.currentTick);
+	return ready.length > 0 && applyGarbagePackets(state.board, ready);
+};
+
+/** Returns and clears the placement produced by the most recent lock. */
+export const takeLastPlacement = (
+	state: GameEngineState,
+): PlacementScore | undefined => {
+	const placement = state.lastPlacement;
+	delete state.lastPlacement;
+	return placement;
+};
 
 export const enqueueGarbage = (
 	state: GameEngineState,
@@ -275,7 +291,10 @@ export const cancelIncomingGarbage = (
 	lines: number,
 ): number => cancelGarbage(state.incomingGarbage, lines);
 
-export const hardDrop = (state: GameEngineState): number => {
+export const hardDrop = (
+	state: GameEngineState,
+	applyReadyGarbage = true,
+): number => {
 	if (state.gameOver) return 0;
 	let distance = 0;
 	while (
@@ -288,7 +307,7 @@ export const hardDrop = (state: GameEngineState): number => {
 		distance += 1;
 	}
 	state.score += distance * 2;
-	lockAndSpawn(state);
+	lockAndSpawn(state, applyReadyGarbage);
 	return distance;
 };
 
@@ -323,6 +342,7 @@ export const holdPiece = (state: GameEngineState): boolean => {
 export const applyInput = (
 	state: GameEngineState,
 	action: InputAction,
+	applyReadyGarbage = true,
 ): boolean => {
 	switch (action) {
 		case 'move_left':
@@ -336,7 +356,7 @@ export const applyInput = (
 		case 'soft_drop':
 			return softDrop(state);
 		case 'hard_drop':
-			hardDrop(state);
+			hardDrop(state, applyReadyGarbage);
 			return true;
 		case 'hold':
 			return holdPiece(state);
@@ -346,7 +366,11 @@ export const applyInput = (
 export const gravityIntervalMs = (level: number): number =>
 	Math.max(80, 800 * 0.85 ** level);
 
-export const advanceTicks = (state: GameEngineState, ticks: number): void => {
+export const advanceTicks = (
+	state: GameEngineState,
+	ticks: number,
+	applyReadyGarbage = true,
+): void => {
 	if (!Number.isInteger(ticks) || ticks < 0)
 		throw new RangeError('ticks must be a non-negative integer');
 	for (let tick = 0; tick < ticks && !state.gameOver; tick += 1) {
@@ -365,7 +389,7 @@ export const advanceTicks = (state: GameEngineState, ticks: number): void => {
 		}
 		if (isGrounded(state)) {
 			state.lockMs += TICK_MS;
-			if (state.lockMs >= LOCK_DELAY_MS) lockAndSpawn(state);
+			if (state.lockMs >= LOCK_DELAY_MS) lockAndSpawn(state, applyReadyGarbage);
 		} else state.lockMs = 0;
 	}
 };

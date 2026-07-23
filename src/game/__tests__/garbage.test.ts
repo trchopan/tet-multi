@@ -6,7 +6,9 @@ import {
 	cloneEngineState,
 	createEngineState,
 	enqueueGarbage,
+	hardDrop,
 	lockActivePiece,
+	resolveReadyGarbage,
 	serializeEngineState,
 	deserializeEngineState,
 } from '../engine';
@@ -73,6 +75,17 @@ describe('deterministic garbage rules', () => {
 		expect(cancelIncomingGarbage(first, 2)).toBe(2);
 		expect(cancelIncomingGarbage(second, 2)).toBe(2);
 		expect(serializeEngineState(first)).toBe(serializeEngineState(second));
+	});
+
+	test('deferred lock resolution allows cancellation before ready garbage rises', () => {
+		const state = createEngineState('deferred-garbage');
+		enqueueGarbage(state, 1, 2, 0);
+		state.currentTick = 30;
+		hardDrop(state, false);
+		expect(state.incomingGarbage).toHaveLength(1);
+		expect(cancelIncomingGarbage(state, 1)).toBe(1);
+		expect(resolveReadyGarbage(state)).toBe(false);
+		expect(state.incomingGarbage).toEqual([]);
 	});
 
 	test('rejects invalid garbage holes and line counts', () => {

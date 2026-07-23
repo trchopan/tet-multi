@@ -200,7 +200,7 @@ const dispatch = (
 			socket.close(1000, 'Left room');
 			break;
 		case 'input':
-			room.acceptInput(session.playerId, message);
+			room.acceptInput(session.playerId, message, Date.now());
 			break;
 	}
 };
