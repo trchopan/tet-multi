@@ -3,9 +3,11 @@ import type { PlayerMatchState } from '../shared/types';
 
 export interface SocketLike {
 	readonly readyState?: number;
-	send(data: string): void;
+	send(data: string): number | void;
 	close(code?: number, reason?: string): void;
 }
+
+export type SocketWithData<T> = SocketLike & { data: T };
 
 export type SessionSocket = ServerWebSocket<unknown> & SocketLike;
 

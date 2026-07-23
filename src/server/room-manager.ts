@@ -3,8 +3,8 @@ import { Room, RoomError } from './room';
 import { createReconnectToken, type Session, type SocketLike } from './session';
 
 export interface RoomLogger {
-	info(event: string, fields: Record<string, string | number>): void;
-	warn(event: string, fields: Record<string, string | number>): void;
+	info(event: string, fields: Record<string, string | number | boolean>): void;
+	warn(event: string, fields: Record<string, string | number | boolean>): void;
 }
 
 export interface RoomManagerOptions {
@@ -14,6 +14,8 @@ export interface RoomManagerOptions {
 	readonly createSeed?: () => string;
 	readonly createToken?: () => string;
 	readonly logger?: RoomLogger;
+	readonly emptyTtlMs?: number;
+	readonly reconnectGraceMs?: number;
 }
 
 const secureBytes = (length: number): Uint8Array => {
@@ -30,6 +32,10 @@ export class RoomManager {
 	private readonly createSeed: () => string;
 	private readonly createToken: () => string;
 	private readonly logger: RoomLogger;
+	private readonly emptyTtlMs: number | undefined;
+	private readonly reconnectGraceMs: number | undefined;
+	private accepting = true;
+	private readonly unaffiliatedSockets = new Set<SocketLike>();
 
 	constructor(options: RoomManagerOptions = {}) {
 		this.now = options.now ?? Date.now;
@@ -37,6 +43,8 @@ export class RoomManager {
 		this.createId = options.createId ?? (() => crypto.randomUUID());
 		this.createSeed = options.createSeed ?? (() => crypto.randomUUID());
 		this.createToken = options.createToken ?? createReconnectToken;
+		this.emptyTtlMs = options.emptyTtlMs;
+		this.reconnectGraceMs = options.reconnectGraceMs;
 		this.logger = options.logger ?? {
 			info: (event, fields) =>
 				console.info(JSON.stringify({ event, ...fields })),
@@ -54,6 +62,7 @@ export class RoomManager {
 		displayName: string,
 		socket: SocketLike,
 	): { room: Room; session: Session } {
+		if (!this.accepting) throw new Error('INTERNAL_ERROR');
 		let code = this.createCode();
 		while (this.rooms.has(code)) code = this.createCode();
 		const room = new Room({
@@ -62,6 +71,10 @@ export class RoomManager {
 			createId: this.createId,
 			createSeed: this.createSeed,
 			createToken: this.createToken,
+			...(this.reconnectGraceMs === undefined
+				? {}
+				: { reconnectGraceMs: this.reconnectGraceMs }),
+			...(this.emptyTtlMs === undefined ? {} : { emptyTtlMs: this.emptyTtlMs }),
 		});
 		const joined = room.join(clientId, displayName, socket);
 		if (!joined.session || !joined.result.ok)
@@ -91,6 +104,7 @@ export class RoomManager {
 			| 'INVALID_RECONNECT_TOKEN'
 			| 'INTERNAL_ERROR';
 	} {
+		if (!this.accepting) return { error: 'INTERNAL_ERROR' };
 		const room = this.get(code);
 		if (room === undefined) return { error: 'ROOM_NOT_FOUND' as const };
 		const joined = room.join(
@@ -106,6 +120,29 @@ export class RoomManager {
 		return { room, session: joined.session };
 	}
 
+	stopAccepting(): void {
+		this.accepting = false;
+	}
+
+	get sockets(): readonly SocketLike[] {
+		return [
+			...this.unaffiliatedSockets,
+			...[...this.rooms.values()].flatMap((room) =>
+				room.players.flatMap((session) =>
+					session.socket === undefined ? [] : [session.socket],
+				),
+			),
+		];
+	}
+
+	trackSocket(socket: SocketLike): void {
+		this.unaffiliatedSockets.add(socket);
+	}
+
+	untrackSocket(socket: SocketLike): void {
+		this.unaffiliatedSockets.delete(socket);
+	}
+
 	fixedUpdate(now = this.now()): void {
 		for (const [code, room] of [...this.rooms]) {
 			try {
@@ -115,6 +152,10 @@ export class RoomManager {
 				}
 			} catch (error) {
 				this.rooms.delete(code);
+				for (const session of room.players) {
+					if (session.socket !== undefined)
+						session.socket.close(1011, 'Room failed');
+				}
 				this.logger.warn('room_update_failed', {
 					roomCode: code,
 					error: error instanceof Error ? error.message : 'unknown',

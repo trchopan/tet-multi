@@ -36,6 +36,7 @@ import {
 	type Session,
 	type SocketLike,
 } from './session';
+import { sendServerMessage } from './socket-sender';
 
 export interface RoomOptions {
 	readonly code: string;
@@ -281,7 +282,10 @@ export class Room {
 				startTick: this.serverTick,
 				serverTime: now,
 			});
-			this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot(now) });
+			this.broadcast(
+				{ type: 'room_snapshot', snapshot: this.snapshot(now) },
+				false,
+			);
 		}
 		if (this.phase === 'playing' && !wasCountdown) this.simulateTick(now);
 		let removedSession = false;
@@ -525,11 +529,10 @@ export class Room {
 			this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot() });
 	}
 
-	private broadcast(message: ServerMessage): void {
-		const encoded = JSON.stringify(message);
+	private broadcast(message: ServerMessage, replaceable = false): void {
 		for (const session of this.sessions.values()) {
 			if (session.connected && session.socket !== undefined)
-				session.socket.send(encoded);
+				sendServerMessage(session.socket, message, replaceable);
 		}
 	}
 }

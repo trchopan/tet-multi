@@ -185,6 +185,7 @@ describe('room lifecycle', () => {
 		};
 		expect(() => manager.fixedUpdate()).not.toThrow();
 		expect(manager.roomCount).toBe(0);
+		expect((created.session.socket as FakeSocket).closed).toBe(true);
 	});
 
 	test('sends lobby heartbeat snapshots every five seconds', () => {

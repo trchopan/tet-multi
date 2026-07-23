@@ -124,4 +124,16 @@ describe('WebSocket lobby boundary', () => {
 		handlers.close(first);
 		expect(manager.get(roomCode)?.players[0]?.connected).toBe(true);
 	});
+
+	test('closes stale sockets during health checks', () => {
+		const manager = new RoomManager({
+			logger: { info: () => undefined, warn: () => undefined },
+		});
+		const handlers = createWebSocketHandlers(manager, { now: () => 0 });
+		const socket = new FakeSocket();
+		handlers.open(socket);
+		socket.data.lastActivityAt = 0;
+		handlers.health?.(socket, 15_001);
+		expect(socket.closeCode).toBe(1001);
+	});
 });

@@ -32,4 +32,15 @@ describe('fixed simulation scheduler', () => {
 		expect(scheduler.advance(manager)).toBe(0);
 		expect(updates).toBe(0);
 	});
+
+	test('reports bounded scheduler diagnostics', () => {
+		let now = 0;
+		const diagnostics: number[] = [];
+		const scheduler = new FixedScheduler({
+			now: () => now,
+			onDiagnostics: (value) => diagnostics.push(value.lagMs),
+		});
+		scheduler.advance({ fixedUpdate: () => undefined }, 1000);
+		expect(diagnostics[0]).toBeLessThanOrEqual(250);
+	});
 });
