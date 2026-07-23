@@ -1,949 +1,1449 @@
-# SPEC.md
+# Multiplayer Falling-Block Game Specification
 
-## Project Title
+## 1. Document status
 
-Peer-to-Peer Multiplayer Tetris for the Web
+- **Status:** Implementation specification
+- **Target runtime:** Bun with TypeScript
+- **Frontend:** Svelte 5 SPA built with SvelteKit and `@sveltejs/adapter-static`
+- **Transport:** Native Bun server-side WebSockets
+- **Maximum players per room:** 6
+- **Persistence:** None for the MVP; all rooms and matches exist in process memory
+- **Deployment model:** One Bun process serving both the WebSocket endpoint and static SPA assets
 
-## 1. Objective
+This document is authoritative for the initial implementation. When implementation details are not explicitly defined, choose the smallest solution consistent with this specification and record the decision in the repository README.
 
-Build a browser-based multiplayer Tetris game for up to six players. The application is deployed as a static website only. It must not require a custom backend, hosted database, signaling server, Firebase, or managed game service.
+---
 
-Players connect directly using WebRTC DataChannels. One browser acts as the leader and authoritative game engine. The leader creates a unique WebRTC offer for each joining player and shares it through an external messaging channel such as Slack, Discord, Messenger, email, or another chat application. Each player returns an answer string through the same channel.
+## 2. Product summary
 
-The game displays all participants simultaneously in a responsive six-board layout.
+Build a browser-based, real-time, multiplayer falling-block game for 2–6 players. Each player controls an independent 10-column board. All active boards are visible simultaneously in a responsive grid. A Bun server owns the authoritative game state, validates player input, advances every board, resolves attacks, and broadcasts state snapshots to all clients in the room.
 
-## 2. Core Constraints
-
-- Maximum of six players.
-- One leader and up to five guests.
-- Static hosting only.
-- No custom backend.
-- No Firebase, Supabase, hosted database, or signaling service.
-- No QR-code workflow.
-- WebRTC signaling is manual through copyable text payloads.
-- Each guest receives a unique WebRTC offer.
-- The leader is the authoritative simulation host.
-- WebRTC DataChannels carry all gameplay traffic after connection setup.
-- Public STUN may be used.
-- TURN is not required for the initial implementation.
-- If a direct connection cannot be established without TURN, the player must receive a clear error.
-- Leader disconnection ends the active match in version one.
-
-## 3. Recommended Stack
-
-### Frontend
-
-- TypeScript
-- Vite
-- React
-- HTML Canvas 2D for board rendering
-- CSS Grid for the six-board layout
-- Web Workers for the leader simulation loop if practical
-- Native WebRTC APIs
-
-### Testing
-
-- Vitest for unit tests
-- Playwright for browser integration and multiplayer setup flows
-
-### Optional Libraries
-
-Use only when they materially simplify the implementation.
-
-- `pako` or `fflate` for signaling-payload compression
-- `zod` for runtime message validation
-- `nanoid` for local identifiers
-
-Avoid introducing a multiplayer framework, game server framework, or state-management library unless clearly justified.
-
-## 4. Product Experience
-
-### 4.1 Home Screen
-
-The home screen has two primary actions:
-
-- Create Room
-- Join Room
-
-It may also include:
-
-- Display-name input
-- Controls/settings link
-- Audio toggle
-- About/connectivity explanation
-
-### 4.2 Leader Room Setup
-
-After selecting Create Room, the leader enters a lobby.
-
-The lobby provides five guest slots:
+The application must run as one deployable Bun service:
 
 ```text
-Slot 2: Empty
-Slot 3: Empty
-Slot 4: Empty
-Slot 5: Empty
-Slot 6: Empty
+Browser clients
+      │
+      ├── HTTP GET / and assets
+      └── WebSocket /ws
+              │
+              ▼
+       Single Bun process
+       ├── Static SPA server
+       ├── Room manager
+       ├── Authoritative game loop
+       └── WebSocket sessions
 ```
 
-Each slot supports:
+The first release prioritizes correctness, deterministic behavior, clear code boundaries, and reliable play on ordinary internet connections. It does not need accounts, matchmaking, a database, spectators, bots, rankings, or horizontal scaling.
 
-- Create Invite
-- Copy Offer
-- Paste Answer
-- Connect
-- Cancel/Reset Slot
-- Connection status
-- Guest display name after handshake
-- Ping after connection
+---
 
-Expected slot states:
+## 3. Goals
 
-```text
-EMPTY
-CREATING_OFFER
-WAITING_FOR_ANSWER
-CONNECTING
-CONNECTED
-FAILED
-CLOSED
-```
+1. Allow a player to create a room and share a short room code or URL.
+2. Allow 2–6 players to join the same room from modern desktop browsers.
+3. Show all player boards in real time on every client.
+4. Make the server authoritative for all gameplay and match outcomes.
+5. Keep local controls responsive through client-side visual prediction and server reconciliation.
+6. Support disconnect and reconnect without immediately forfeiting the player.
+7. Provide deterministic, unit-testable game rules independent of Svelte and WebSockets.
+8. Keep the repository simple enough for one engineer or coding agent to understand and maintain.
 
-A separate `RTCPeerConnection` must be created for every guest slot. Offers must never be reused across players.
+---
 
-### 4.3 Guest Join Flow
+## 4. Non-goals
 
-The guest selects Join Room and sees:
+The MVP must not include:
 
-- Display-name field
-- Offer input area
-- Join/Create Answer button
-- Copy Answer button
-- Connection status
-
-Flow:
-
-1. Guest pastes the leader's offer.
-2. Browser validates and decodes the offer.
-3. Browser creates a peer connection.
-4. Browser sets the remote description.
-5. Browser creates and gathers a complete non-trickle ICE answer.
-6. Browser displays a copyable answer string.
-7. Guest sends the answer to the leader through an external chat application.
-8. Leader pastes the answer into the corresponding slot.
-9. WebRTC DataChannel opens.
-10. Guest joins the lobby.
-
-### 4.4 Lobby
-
-The lobby displays:
-
-- All connected players
-- Ready state
-- Leader badge
-- Connection quality or ping
-- Room status
-- Start Match button available only to the leader
-
-The leader may start when at least two players are connected and ready.
-
-Recommended initial behavior:
-
-- Leader is automatically ready.
-- Guests explicitly toggle Ready.
-- Joining is disabled once a match starts.
-- Rejoining during an active match is not required in version one.
-
-### 4.5 Match Layout
-
-Desktop default:
-
-```text
-+----------------+----------------+----------------+
-| Player 1       | Player 2       | Player 3       |
-| Board          | Board          | Board          |
-+----------------+----------------+----------------+
-| Player 4       | Player 5       | Player 6       |
-| Board          | Board          | Board          |
-+----------------+----------------+----------------+
-```
-
-Requirements:
-
-- Use CSS Grid.
-- Support between two and six players.
-- Empty slots are hidden after match start.
-- The local player's board is visually emphasized.
-- Remote boards remain fully visible.
-- Layout adapts to smaller screens.
-- A two-column by three-row layout is acceptable on narrow screens.
-- Each board includes player name, status, pending garbage, and elimination state.
-
-## 5. Game Rules
-
-Implement a modern guideline-inspired Tetris ruleset. Exact visual branding must not copy protected Tetris assets.
-
-### 5.1 Board
-
-- Width: 10 cells
-- Visible height: 20 cells
-- Hidden spawn rows: at least 2
-
-### 5.2 Pieces
-
-- Seven tetrominoes
-- Seven-bag randomizer
-- Shared deterministic piece sequence generated by the leader
-- Next queue with at least five visible pieces
-- Hold piece
-- One hold per active piece
-
-### 5.3 Movement
-
-- Left
-- Right
-- Soft drop
-- Hard drop
-- Rotate clockwise
-- Rotate counterclockwise
-- Hold
-
-### 5.4 Rotation
-
-Implement Super Rotation System behavior or a compatible documented equivalent.
-
-### 5.5 Timing
-
-- Fixed-step simulation
-- Recommended simulation rate: 60 ticks per second
-- Rendering is decoupled from simulation
-- Gravity increases over time or level
-- Configurable DAS and ARR are optional for version one
-
-### 5.6 Line Clears and Attacks
-
-Minimum supported attacks:
-
-- Single
-- Double
-- Triple
-- Tetris
-- T-spin single
-- T-spin double
-- T-spin triple if implemented correctly
-- Back-to-back bonus
-- Combo bonus
-
-Document the attack table in code and tests.
-
-### 5.7 Garbage
-
-- Garbage is generated by the authoritative leader.
-- Garbage attacks are queued before application.
-- Garbage cancellation is supported.
-- Garbage has one hole per row.
-- Hole selection is controlled by the leader.
-- Garbage is applied after a configurable delay or on piece lock.
-- Clients must never decide their own received garbage.
-
-### 5.8 Targeting
-
-Initial target mode:
-
-- Random active opponent
-
-Optional future modes:
-
-- Manual target
-- Attackers
-- Badges
-- Knockout priority
-
-### 5.9 Elimination and Winner
-
-- A player is eliminated when a new piece cannot spawn or locks above the valid board area.
-- Eliminated players remain visible as spectators.
-- The last non-eliminated player wins.
-- The leader broadcasts the final result.
-
-## 6. Authority Model
-
-The leader owns the canonical game state for all players.
-
-The leader is responsible for:
-
-- Match clock
-- Simulation tick
-- Piece sequence
-- Input ordering
-- Movement validation
-- Piece locking
-- Rotation validation
-- Line detection
-- Attack calculation
-- Garbage routing and application
-- Elimination
-- Winner determination
-- Canonical snapshots
-
-Guests must not send authoritative board state, score, line clears, attacks, or elimination results.
-
-Guests send only player intent and protocol-level messages.
-
-## 7. Client Prediction
-
-Local input should feel immediate.
-
-Guest behavior:
-
-1. Apply local movement prediction for the local active piece.
-2. Assign each input a monotonically increasing sequence number.
-3. Send the input to the leader.
-4. Retain unacknowledged inputs.
-5. Receive authoritative state and latest acknowledged input sequence.
-6. Replace local state with authoritative state.
-7. Reapply remaining unacknowledged inputs when valid.
-
-The leader remains authoritative for:
-
-- Piece locks
-- Line clears
-- Garbage
-- Spawn state
-- Elimination
-
-For version one, a simplified prediction model is acceptable:
-
-- Predict horizontal motion, rotation, soft drop, and hard-drop animation.
-- Accept authoritative correction on every lock.
-- Do not allow guest-predicted line clears or garbage.
-
-## 8. Network Topology
-
-Use a WebRTC star topology.
-
-```text
-Guest 2 ----\
-Guest 3 -----\
-Guest 4 ------ Leader
-Guest 5 -----/
-Guest 6 ----/
-```
-
-Connections:
-
-- Leader: up to five peer connections
-- Guest: one peer connection
-
-The leader relays canonical updates to all guests.
-
-No guest-to-guest peer connections are required.
-
-## 9. Manual Signaling
-
-### 9.1 Non-Trickle ICE
-
-Manual signaling must use non-trickle ICE.
-
-Before producing a copyable offer or answer:
-
-- Set local description.
-- Wait until `iceGatheringState` is `complete`.
-- Include gathered ICE candidates in the SDP payload.
-
-This keeps the exchange to one offer string and one answer string per connection.
-
-### 9.2 Payload Format
-
-Use a versioned envelope.
-
-```ts
-interface SignalingPayload {
-  protocol: "p2p-tetris-signaling";
-  version: 1;
-  roomId: string;
-  slotId: string;
-  peerId: string;
-  role: "offer" | "answer";
-  createdAt: number;
-  description: RTCSessionDescriptionInit;
-}
-```
-
-Requirements:
-
-- Serialize as JSON.
-- Compress before encoding when beneficial.
-- Encode using base64url.
-- Prefix with a recognizable marker such as `PT1.`.
-- Validate protocol, version, role, and required fields before use.
-- Reject malformed or unsupported payloads.
-- Do not execute or evaluate payload content.
-
-Example shape:
-
-```text
-PT1.<base64url-compressed-payload>
-```
-
-### 9.3 Offer Lifecycle
-
-Each offer:
-
-- Belongs to exactly one leader slot.
-- Is used by one guest only.
-- Expires locally after a configurable timeout.
-- Can be reset by the leader.
-- Must not be reused after a failed or closed connection unless the peer connection is fully recreated.
-
-## 10. WebRTC Configuration
-
-Initial configuration:
-
-```ts
-const config: RTCConfiguration = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" }
-  ]
-};
-```
-
-The STUN list must be isolated in configuration so it can be changed later.
-
-The UI must explain:
-
-- Direct peer connectivity is not guaranteed.
-- Some corporate, mobile, or restrictive networks require TURN.
-- This version intentionally does not provide TURN.
-
-## 11. DataChannels
-
-Version one may use a single reliable ordered DataChannel per guest.
-
-```ts
-pc.createDataChannel("game", {
-  ordered: true
-});
-```
-
-The protocol must be designed so a second channel can be added later.
-
-Potential future split:
-
-- `events`: reliable and ordered
-- `state`: unordered with limited retransmission
-
-## 12. Wire Protocol
-
-All messages must use a versioned envelope.
-
-```ts
-interface MessageEnvelope<TType extends string, TPayload> {
-  protocol: "p2p-tetris";
-  version: 1;
-  matchId: string | null;
-  senderId: string;
-  sequence: number;
-  sentAt: number;
-  type: TType;
-  payload: TPayload;
-}
-```
-
-Runtime validation is required for every received message.
-
-### 12.1 Lobby Messages
-
-- `hello`
-- `welcome`
-- `player_joined`
-- `player_left`
-- `ready_changed`
-- `lobby_state`
-- `start_match`
-- `connection_ping`
-- `connection_pong`
-- `protocol_error`
-
-### 12.2 Gameplay Messages
-
-Guest to leader:
-
-- `input`
-- `snapshot_request`
-- `ping`
-- `client_status`
-
-Leader to guest:
-
-- `match_initialized`
-- `authoritative_player_state`
-- `board_delta`
-- `full_snapshot`
-- `piece_locked`
-- `lines_cleared`
-- `garbage_queued`
-- `garbage_applied`
-- `player_eliminated`
-- `match_ended`
-- `pause_state`
-- `pong`
-- `protocol_error`
-
-### 12.3 Input Message
-
-```ts
-interface InputPayload {
-  playerId: string;
-  inputSequence: number;
-  clientTick: number;
-  action:
-    | "left_down"
-    | "left_up"
-    | "right_down"
-    | "right_up"
-    | "soft_drop_down"
-    | "soft_drop_up"
-    | "hard_drop"
-    | "rotate_cw"
-    | "rotate_ccw"
-    | "hold";
-}
-```
-
-### 12.4 Snapshot
-
-A full snapshot contains enough data for a client to reconstruct the entire match:
-
-- Match ID
-- Leader tick
-- Match status
-- Player order
-- Piece-sequence position
-- Per-player board
-- Active piece
-- Hold piece
-- Next queue
-- Score
-- Lines
-- Combo
-- Back-to-back state
-- Pending garbage
-- Elimination state
-- Latest acknowledged input sequence
-- Winner if match ended
-
-## 13. State Synchronization
-
-The leader sends updates:
-
-- Immediately for important state transitions
-- At a regular lightweight update interval during active play
-- As a complete snapshot periodically
-
-Recommended values:
-
-- Simulation: 60 Hz
-- Player-state updates: 15-30 Hz
-- Full snapshot: every 1-2 seconds
-- Ping: every 2-5 seconds
-
-Every canonical state must include:
-
-- Leader tick
-- Revision number
-- Latest acknowledged input sequence per player
-
-Clients must request a full snapshot when:
-
-- Revision gaps are detected
-- Validation fails
-- A delta cannot be applied
-- A local checksum differs from the leader checksum
-
-## 14. Determinism
-
-The leader is authoritative, so perfect cross-browser determinism is not mandatory for correctness. However, the simulation should still be deterministic under identical inputs for testing.
-
-Requirements:
-
-- Avoid `Math.random()` inside the game engine.
-- Use an explicit seeded PRNG.
-- Keep game-engine logic free of DOM dependencies.
-- Represent simulation time using integer ticks.
-- Avoid frame-duration-dependent movement.
-
-## 15. Rendering
-
-Use Canvas 2D.
-
-Each board renderer supports:
-
-- Settled blocks
-- Active piece
-- Ghost piece
-- Garbage indicator
-- Line-clear animation
-- Player name
-- Ready/alive/eliminated state
-- Connection-lost overlay
-
-Rendering requirements:
-
-- The local board is highlighted.
-- Canvas scales cleanly with device pixel ratio.
-- Rendering does not mutate game state.
-- Remote boards may use lower animation detail if performance requires it.
-- Six active boards must remain smooth on a typical modern laptop.
-
-## 16. Input
-
-Default keyboard mapping:
-
-| Action | Key |
-|---|---|
-| Move left | ArrowLeft |
-| Move right | ArrowRight |
-| Soft drop | ArrowDown |
-| Hard drop | Space |
-| Rotate clockwise | ArrowUp or X |
-| Rotate counterclockwise | Z |
-| Hold | C or Shift |
-| Pause request | Escape |
-
-Requirements:
-
-- Prevent browser scrolling for active game controls.
-- Ignore repeated one-shot actions where appropriate.
-- Track keydown and keyup for held movement.
-- Allow remapping as a future extension.
-
-## 17. Match Lifecycle
-
-```text
-HOME
-  -> LEADER_LOBBY or GUEST_SIGNALING
-  -> CONNECTED_LOBBY
-  -> COUNTDOWN
-  -> PLAYING
-  -> FINISHED
-  -> REMATCH_LOBBY or HOME
-```
-
-Leader-only transitions:
-
-- Start match
-- Pause match
-- Resume match
-- End match
-- Start rematch
-
-If the leader tab becomes hidden during an active match:
-
-- Detect `visibilitychange`.
-- Pause the authoritative simulation.
-- Broadcast the pause state.
-- Show a clear reason.
-
-## 18. Failure Handling
-
-### 18.1 Guest Disconnect
-
-- Leader marks the guest disconnected.
-- During lobby: remove or allow slot reset.
-- During match: eliminate or forfeit the guest after a short grace period.
-- Broadcast the result.
-
-### 18.2 Leader Disconnect
-
-Version-one behavior:
-
-- All guests detect DataChannel closure.
-- Match ends immediately.
-- Display `Leader disconnected`.
-- Return to the home screen or preserve final local state for review.
-
-No automatic leader migration is required.
-
-### 18.3 Signaling Errors
-
-Provide specific messages for:
-
-- Invalid payload
-- Wrong payload role
-- Unsupported version
-- Expired invite
-- Slot mismatch
-- ICE failure
-- Connection timeout
-- DataChannel failure
-- Duplicate answer
-
-### 18.4 Protocol Errors
-
-- Reject invalid messages.
-- Do not crash the match.
-- Rate-limit repeated protocol errors.
-- Disconnect peers sending persistently invalid data.
-
-## 19. Security Model
-
-This is a casual peer-hosted game, not a cheat-proof ranked platform.
-
-Security requirements:
-
-- Treat all guest messages as untrusted.
-- Validate message shape and ranges.
-- Limit message size.
-- Limit message rate.
-- Never use `eval`, dynamic function construction, or HTML injection.
-- Sanitize display names.
-- Do not trust guest-reported score, board, line clear, or attack values.
-- Leader validates all inputs against canonical state.
-- Use cryptographically random local IDs where practical.
-- Do not persist signaling payloads or game state unless explicitly added later.
-
-Privacy note:
-
-- WebRTC peer connections may reveal network-related metadata to peers depending on browser behavior and network setup.
-- Document that the leader establishes a direct connection with each guest.
-
-## 20. Accessibility
-
-Minimum requirements:
-
-- Keyboard-operable lobby and signaling controls
-- Visible focus indicators
-- Sufficient contrast
-- Text status for connection and ready state
-- Reduced-motion support for nonessential effects
-- Screen-reader labels for buttons and signaling fields
-
-Gameplay itself may be primarily visual, but setup and status flows must be accessible.
-
-## 21. Persistence
-
-Use local storage only for non-sensitive preferences:
-
-- Display name
-- Volume
-- Control preferences
-- Visual settings
-
-Do not store:
-
-- Offers
-- Answers
-- Peer connection details
-- Active match snapshots
-
-unless explicitly required for debugging behind a development-only flag.
-
-## 22. Suggested Module Structure
-
-```text
-src/
-  app/
-    App.tsx
-    routes.ts
-  ui/
-    HomeScreen.tsx
-    LeaderLobby.tsx
-    GuestJoin.tsx
-    ConnectedLobby.tsx
-    MatchScreen.tsx
-    PlayerBoard.tsx
-    ConnectionSlot.tsx
-  game/
-    engine.ts
-    board.ts
-    pieces.ts
-    rotation.ts
-    randomizer.ts
-    scoring.ts
-    garbage.ts
-    targeting.ts
-    types.ts
-    constants.ts
-  network/
-    peer.ts
-    leaderNetwork.ts
-    guestNetwork.ts
-    signalingCodec.ts
-    ice.ts
-    protocol.ts
-    protocolValidation.ts
-    connectionState.ts
-  simulation/
-    leaderSimulation.ts
-    prediction.ts
-    reconciliation.ts
-    snapshots.ts
-  render/
-    canvasRenderer.ts
-    boardLayout.ts
-    animation.ts
-  input/
-    keyboard.ts
-    bindings.ts
-  state/
-    appState.ts
-    lobbyState.ts
-    matchState.ts
-  workers/
-    leader.worker.ts
-  utils/
-    ids.ts
-    clock.ts
-    assertions.ts
-    logging.ts
-  tests/
-```
-
-The game engine and protocol types must not depend on React.
-
-## 23. Testing Requirements
-
-### 23.1 Unit Tests
-
-Cover:
-
-- Seven-bag generation
-- Seed reproducibility
-- Collision detection
-- Piece movement
-- Rotation and wall kicks
-- Piece locking
-- Line detection and clearing
-- Hold behavior
-- Spawn collision
-- Attack calculation
-- Garbage cancellation
-- Garbage application
-- Elimination
-- Target selection
-- Input sequencing
-- Reconciliation
-- Snapshot serialization
-- Signaling codec round-trip
-- Message validation
-
-### 23.2 Integration Tests
-
-Cover:
-
-- Leader creates offer
-- Guest creates answer
-- Leader accepts answer
-- DataChannel opens
-- Lobby handshake completes
-- Ready state syncs
-- Match starts
-- Guest input reaches leader
-- Leader state reaches all guests
-- Player elimination broadcasts
-- Leader disconnect ends match
-
-Where browser automation cannot use real external network paths reliably, use two or more browser contexts on the same machine.
-
-### 23.3 Performance Tests
-
-Validate:
-
-- Six boards render smoothly.
-- Leader can simulate six players at 60 ticks per second.
-- Snapshot encoding remains small and fast.
-- Message processing does not grow without bounds.
-- No unbounded queues exist.
-
-## 24. Development Diagnostics
-
-Development-only diagnostics should include:
-
-- Peer connection state
-- ICE connection state
-- ICE gathering state
-- DataChannel state
-- Ping
-- Message counts
-- Bytes sent/received
-- Leader tick
-- State revision
-- Last acknowledged input
-- Snapshot requests
-- Protocol errors
-
-Diagnostics must be easy to disable in production.
-
-## 25. Deployment
-
-The application must build to static assets.
-
-Supported deployment targets include:
-
-- GitHub Pages
-- Cloudflare Pages
-- Netlify static hosting
-- Vercel static output
-
-Requirements:
-
-- HTTPS is mandatory for production WebRTC usage.
-- No server-side rendering dependency.
-- No runtime server functions.
-- No secret environment variables required.
-- STUN configuration may be supplied at build time through a public configuration value.
-
-## 26. Acceptance Criteria
-
-The project is complete when all of the following are true:
-
-1. A leader can create five independent connection offers.
-2. A guest can paste an offer and generate a single answer string.
-3. A leader can paste the answer and establish a WebRTC DataChannel.
-4. Up to five guests can connect to one leader simultaneously.
-5. All connected players appear in a lobby.
-6. Ready state synchronizes through the leader.
-7. The leader can start a match with two to six players.
-8. Each player can control only their own piece.
-9. The leader authoritatively simulates all boards.
-10. All clients display all active boards in real time.
-11. Piece locks, line clears, garbage, elimination, and winner state are leader-authoritative.
-12. Local controls remain responsive through prediction.
-13. Authoritative corrections reconcile without breaking the match.
-14. Periodic snapshots recover from missed or invalid deltas.
-15. Leader disconnect ends the match with a clear message.
-16. A failed direct WebRTC connection produces an actionable error.
-17. The application runs from static hosting without a custom backend.
-18. Core game-engine and signaling modules have automated tests.
-
-## 27. Out of Scope for Version One
-
-- Hosted matchmaking
-- Accounts
-- Ranked play
-- Persistent statistics
-- Spectators who join after match start
-- Automatic leader migration
-- TURN service
-- Voice chat
+- User accounts or authentication
+- Persistent profiles, rankings, match history, or statistics
+- Database storage
+- Public matchmaking or a room browser
+- Spectators
+- AI players
+- Voice or text chat
 - Mobile touch controls
-- Public room directory
-- Anti-cheat guarantees against a malicious leader
-- Reconnection into an active match
-- Cross-room chat
-
-## 28. Future Extensions
-
-- Optional TURN configuration
-- Automated signaling through an optional service
-- Leader migration using pre-established peer mesh
-- Spectator mode
+- Multiple server instances sharing rooms
+- Serverless or edge-runtime deployment
 - Replay files
+- Custom rule editors
+- Paid services such as Firebase, Supabase, hosted pub/sub, or managed game backends
+- Pixel-perfect reproduction of any commercial Tetris product
+
+The game may use familiar falling-block mechanics, but all visual assets, names, sounds, and branding must be original or permissively licensed.
+
+---
+
+## 5. Primary user flow
+
+### 5.1 Create a room
+
+1. The user opens the root page.
+2. The user enters a display name containing 1–20 visible characters.
+3. The user selects **Create room**.
+4. The server creates a room with a six-character code.
+5. The creator becomes the room host.
+6. The browser navigates to `/room/{ROOM_CODE}`.
+7. The lobby displays a copyable invite URL.
+
+### 5.2 Join a room
+
+1. The user opens an invite URL or enters a room code on the home page.
+2. The user enters a display name.
+3. The client opens `/ws` and sends a `join_room` message.
+4. The server either accepts the player or returns a structured error.
+5. The player appears in the lobby.
+
+### 5.3 Start a match
+
+1. Every non-host player marks themselves ready.
+2. The host marks themselves ready.
+3. The host selects **Start match**.
+4. Start is allowed only when:
+   - There are at least 2 connected players.
+   - There are no more than 6 players.
+   - Every connected player is ready.
+   - No countdown or match is already active.
+5. The server broadcasts a three-second countdown.
+6. The server starts all boards on the same authoritative tick.
+
+### 5.4 Finish and replay
+
+1. A player is eliminated on top-out or after their reconnect grace period expires.
+2. The last non-eliminated player wins.
+3. If all remaining players top out on the same authoritative tick, the match is a draw among those players.
+4. The result screen shows placement and basic match statistics.
+5. All connected players return to an unready lobby state when the host selects **Return to lobby**.
+
+---
+
+## 6. Browser support
+
+Support the current stable versions of:
+
+- Chrome
+- Edge
+- Firefox
+- Safari on macOS
+
+The MVP is desktop-first. The UI may display a clear unsupported-device notice below a practical minimum viewport width, but it must remain readable on tablets.
+
+Required browser APIs:
+
+- WebSocket
+- Canvas 2D
+- `requestAnimationFrame`
+- `crypto.randomUUID`
+- `localStorage`
+- `ResizeObserver`
+
+---
+
+## 7. Technology choices
+
+### 7.1 Runtime and package manager
+
+- Use Bun for dependency installation, scripts, tests, and production runtime.
+- Declare the selected Bun version in the `packageManager` field of `package.json` and commit `bun.lock`.
+- Use TypeScript with strict mode enabled.
+- Do not add Express, Hono, Elysia, Socket.IO, or another HTTP/WebSocket framework unless a requirement cannot be met with `Bun.serve`.
+
+### 7.2 Frontend
+
+- Use Svelte 5 and SvelteKit.
+- Build a static SPA with `@sveltejs/adapter-static` and a fallback page.
+- Disable SSR for the application shell.
+- Use Svelte runes for new reactive code.
+- Render game boards with Canvas 2D.
+- Use ordinary HTML for lobby controls, buttons, dialogs, labels, and result views.
+
+### 7.3 Validation
+
+Use one small runtime schema library shared by client and server. **Valibot is preferred** for protocol validation. Zod is acceptable if already present. Do not trust TypeScript types at runtime.
+
+### 7.4 Testing
+
+- Use `bun test` for engine, room, protocol, and server unit tests.
+- Use Vitest only if required for Svelte component tests.
+- Use Playwright for a small end-to-end suite with multiple browser contexts.
+
+---
+
+## 8. Repository layout
+
+Use a single repository and one root package:
+
+```text
+.
+├── AGENTS.md
+├── SPEC.md
+├── README.md
+├── package.json
+├── bun.lock
+├── tsconfig.json
+├── svelte.config.js
+├── vite.config.ts
+├── static/
+│   └── favicon.svg
+├── src/
+│   ├── shared/
+│   │   ├── constants.ts
+│   │   ├── protocol.ts
+│   │   ├── schemas.ts
+│   │   └── types.ts
+│   ├── game/
+│   │   ├── board.ts
+│   │   ├── engine.ts
+│   │   ├── garbage.ts
+│   │   ├── pieces.ts
+│   │   ├── random.ts
+│   │   ├── rotation.ts
+│   │   ├── scoring.ts
+│   │   └── __tests__/
+│   ├── server/
+│   │   ├── index.ts
+│   │   ├── config.ts
+│   │   ├── room-manager.ts
+│   │   ├── room.ts
+│   │   ├── session.ts
+│   │   ├── snapshot.ts
+│   │   └── __tests__/
+│   ├── lib/
+│   │   ├── client/
+│   │   │   ├── game-session.svelte.ts
+│   │   │   ├── input.ts
+│   │   │   ├── prediction.ts
+│   │   │   ├── renderer.ts
+│   │   │   └── websocket.ts
+│   │   └── components/
+│   │       ├── BoardCanvas.svelte
+│   │       ├── GameGrid.svelte
+│   │       ├── HomeForm.svelte
+│   │       ├── Lobby.svelte
+│   │       ├── PlayerCard.svelte
+│   │       └── Results.svelte
+│   └── routes/
+│       ├── +layout.ts
+│       ├── +page.svelte
+│       └── room/
+│           └── [code]/
+│               └── +page.svelte
+├── e2e/
+│   └── multiplayer.spec.ts
+└── scripts/
+    └── verify.ts
+```
+
+The game engine under `src/game` must not import Svelte, DOM APIs, Bun WebSocket types, timers, or server room classes.
+
+---
+
+## 9. Domain terminology
+
+- **Room:** Lobby and zero or more matches associated with one invite code.
+- **Host:** Player currently authorized to start matches and return results to the lobby.
+- **Session:** One logical player identity, including reconnect token and current WebSocket.
+- **Match:** One synchronized competition inside a room.
+- **Tick:** One authoritative fixed simulation step.
+- **Snapshot:** Server-created representation of the current room and game state.
+- **Input:** A player action submitted to the server with a monotonically increasing sequence number.
+- **Attack:** Garbage lines generated by a line clear after cancellation rules.
+- **Top-out:** A board reaches a state that eliminates the player.
+
+---
+
+## 10. Room rules
+
+### 10.1 Room code
+
+- Exactly six uppercase characters.
+- Alphabet: `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`.
+- Exclude visually ambiguous characters such as `I`, `O`, `0`, and `1`.
+- Codes are case-insensitive on input and normalized to uppercase.
+- Generate codes with cryptographically secure randomness.
+- Retry on collision.
+
+### 10.2 Capacity
+
+- Minimum players to start: 2.
+- Maximum player sessions in a room: 6.
+- Reconnecting sessions continue to occupy a slot during the grace period.
+- Joining during a countdown or active match is rejected with `MATCH_IN_PROGRESS`.
+
+### 10.3 Host behavior
+
+- The room creator is initially host.
+- If the host disconnects, they remain host during the reconnect grace period.
+- If the host leaves explicitly or their grace period expires, host status moves to the connected player with the earliest `joinedAt` timestamp.
+- Host migration is broadcast immediately.
+- If no connected players remain, the room is removed after the empty-room timeout.
+
+### 10.4 Room expiration
+
+- Empty room timeout: 5 minutes.
+- Finished match with no connected players: delete after 1 minute.
+- A room containing connected players has no fixed expiration in the MVP.
+
+### 10.5 Display names
+
+- Trim leading and trailing whitespace.
+- Length: 1–20 Unicode code points.
+- Reject control characters and line breaks.
+- Names need not be unique. The UI disambiguates duplicate names using a short player suffix.
+- Escape names as text. Never inject them as HTML.
+
+---
+
+## 11. Match lifecycle
+
+```text
+LOBBY
+  │ host starts, all ready, >=2 players
+  ▼
+COUNTDOWN (3 seconds)
+  │
+  ▼
+PLAYING
+  │ one survivor or simultaneous final top-out
+  ▼
+FINISHED
+  │ host returns room
+  └──────────────────────────────► LOBBY
+```
+
+Room phases:
+
+```ts
+type RoomPhase = "lobby" | "countdown" | "playing" | "finished";
+```
+
+Player match states:
+
+```ts
+type PlayerMatchState =
+  | "waiting"
+  | "playing"
+  | "disconnected"
+  | "eliminated";
+```
+
+A disconnected player’s engine continues to advance during the grace period. This prevents disconnecting from being used as a pause exploit.
+
+---
+
+## 12. Board and piece rules
+
+### 12.1 Board dimensions
+
+- Width: 10 cells.
+- Visible height: 20 cells.
+- Hidden spawn area: 4 rows.
+- Internal board dimensions: 10 × 24.
+- Coordinate origin: top-left.
+- X increases rightward; Y increases downward.
+
+### 12.2 Pieces
+
+Support seven tetromino types:
+
+```ts
+type PieceKind = "I" | "J" | "L" | "O" | "S" | "T" | "Z";
+```
+
+Use a deterministic seven-bag randomizer:
+
+1. Shuffle all seven piece kinds with a seeded PRNG.
+2. Consume the bag in order.
+3. Generate a new shuffled bag when exhausted.
+4. All players in a match use the same room piece seed and therefore the same infinite bag sequence.
+5. Each player has an independent sequence cursor.
+
+Do not use `Math.random()` inside deterministic game logic.
+
+### 12.3 Rotation
+
+Implement Super Rotation System-style piece states and wall kicks:
+
+- Four rotation states: `0`, `R`, `2`, `L`.
+- Separate kick tables for I and JLSTZ pieces.
+- O rotation is visually stable and must not translate unexpectedly.
+- Support clockwise and counterclockwise rotation.
+- Rotation tests must cover wall, floor, stack, and blocked-kick cases.
+
+### 12.4 Hold
+
+- One hold slot per player.
+- Hold may be used once per active piece.
+- First hold stores the current piece and draws the next piece.
+- Later holds swap the current piece with the held piece.
+- A held or swapped-in piece starts at its normal spawn position and rotation.
+
+### 12.5 Preview
+
+Show the next five pieces.
+
+### 12.6 Ghost piece
+
+The client shows the hard-drop landing position as a translucent ghost. The ghost is presentation-only and must be derived from authoritative or predicted local state.
+
+---
+
+## 13. Timing and movement
+
+The server uses a fixed timestep of 60 ticks per second:
+
+```ts
+const TICK_RATE = 60;
+const TICK_MS = 1000 / TICK_RATE;
+```
+
+Use an accumulator and clamp a single elapsed-time contribution to 250 ms to avoid a runaway catch-up loop.
+
+### 13.1 Gravity
+
+- Initial gravity interval: 800 ms per cell.
+- Level: `Math.floor(totalLinesCleared / 10)`.
+- Gravity interval: `max(80, 800 * 0.85 ** level)` milliseconds.
+- Apply enough gravity steps to account for accumulated elapsed time.
+
+### 13.2 Lock behavior
+
+- Lock delay: 500 ms after the active piece first touches the stack or floor.
+- Successful movement or rotation while grounded resets the lock timer.
+- Maximum grounded lock resets per piece: 15.
+- Hard drop locks immediately.
+- When lock delay expires, merge the piece, clear lines, resolve attacks, and spawn the next piece.
+
+### 13.3 Keyboard repeat
+
+Client input handling defaults:
+
+- Delayed auto shift (DAS): 140 ms.
+- Auto repeat rate (ARR): 40 ms.
+- Soft drop repeat interval: 35 ms.
+- Opposite-direction behavior: the most recently pressed horizontal direction wins.
+- Key-repeat behavior must be generated by the game input module, not browser `KeyboardEvent.repeat` alone.
+
+### 13.4 Default controls
+
+| Action | Primary key | Alternate key |
+|---|---:|---:|
+| Move left | Left Arrow | A |
+| Move right | Right Arrow | D |
+| Soft drop | Down Arrow | S |
+| Hard drop | Space | W |
+| Rotate clockwise | Up Arrow | X |
+| Rotate counterclockwise | Z | Q |
+| Hold | C | Shift |
+
+Prevent default browser scrolling for active gameplay keys while the game canvas has control focus.
+
+---
+
+## 14. Line clears, score, and attacks
+
+### 14.1 Basic score
+
+Score is informative and does not determine the winner.
+
+| Clear | Base score × (`level + 1`) |
+|---|---:|
+| Single | 100 |
+| Double | 300 |
+| Triple | 500 |
+| Four-line clear | 800 |
+| T-spin mini, no line | 100 |
+| T-spin, no line | 400 |
+| T-spin mini single | 200 |
+| T-spin single | 800 |
+| T-spin double | 1200 |
+| T-spin triple | 1600 |
+| Soft drop | 1 per cell |
+| Hard drop | 2 per cell |
+
+### 14.2 Base garbage attack
+
+| Clear | Garbage lines |
+|---|---:|
+| Single | 0 |
+| Double | 1 |
+| Triple | 2 |
+| Four-line clear | 4 |
+| T-spin mini single | 1 |
+| T-spin single | 2 |
+| T-spin double | 4 |
+| T-spin triple | 6 |
+
+### 14.3 Back-to-back
+
+Eligible clears:
+
+- Four-line clear
+- T-spin line clear
+
+A consecutive eligible clear after the first adds one garbage line. A non-eligible line clear breaks back-to-back. A placement with no line clear does not break it.
+
+### 14.4 Combo
+
+Combo starts at `-1` before a clear. Each consecutive piece placement that clears at least one line increments it. A placement with no clear resets it to `-1`.
+
+Combo garbage bonus:
+
+| Combo index | Bonus |
+|---|---:|
+| 0–1 | 0 |
+| 2–3 | 1 |
+| 4–5 | 2 |
+| 6–7 | 3 |
+| 8+ | 4 |
+
+### 14.5 Perfect clear
+
+If the board is empty after line clearing, add 10 garbage lines.
+
+### 14.6 T-spin detection
+
+A T-spin requires:
+
+1. The locked piece is T.
+2. The most recent successful player action affecting the piece was a rotation.
+3. At least three of the four diagonal cells around the T rotation center are occupied or outside the board.
+
+Classify mini versus full using the two front corner cells for the final rotation state and whether the successful kick was the final SRS kick. Keep this logic isolated and covered by tests.
+
+### 14.7 Incoming garbage cancellation
+
+Before sending an attack to another player:
+
+1. Cancel pending incoming garbage from oldest packet to newest.
+2. One outgoing line cancels one incoming line.
+3. Only the remaining outgoing attack is sent.
+4. If all outgoing attack is consumed, remaining incoming garbage stays queued.
+
+### 14.8 Garbage delivery
+
+- Garbage packets have an activation delay of 500 ms.
+- Ready garbage rises only after the current piece locks and its line clear resolves.
+- Applying garbage shifts the board upward.
+- Each row has one hole.
+- All rows in one attack packet use the same hole.
+- The hole is selected with a deterministic room garbage PRNG.
+- A new attack packet selects a new hole independently.
+- If shifted blocks or newly added garbage exceed the hidden area, the player tops out.
+
+### 14.9 Targeting
+
+The MVP uses automatic targeting:
+
+- Target one random connected, non-eliminated opponent.
+- Exclude the attacker.
+- Choose a target at the time the outgoing packet is created.
+- Use the authoritative room PRNG.
+- If the target is eliminated before delivery, retarget to another valid opponent.
+- If no opponent remains, discard the attack.
+
+Manual targeting is outside MVP scope.
+
+---
+
+## 15. Top-out and match result
+
+A player is eliminated when any of these occur:
+
+1. A new piece cannot be placed at its spawn position after the previous piece locks and clears resolve.
+2. Locking a piece leaves occupied cells in the hidden spawn area and the next spawn cannot resolve it.
+3. Incoming garbage shifts occupied cells above the internal board.
+4. The player disconnects and does not reconnect before the grace period expires.
+5. The session explicitly leaves during a match.
+
+Placement order is determined by elimination tick, then by player join order for stable display only. Players eliminated on the same tick share the same placement rank. The last surviving player is the winner.
+
+---
+
+## 16. Authoritative simulation
+
+### 16.1 Ownership
+
+The Bun server owns:
+
+- Room phase and countdown
+- Match seed and PRNG state
+- Piece queues
+- Every board and active piece
+- Hold and previews
+- Gravity, lock delay, and line clears
+- Score, combo, back-to-back, and attacks
+- Garbage queues
+- Elimination and winner determination
+- Last processed input sequence for each player
+
+Clients own only:
+
+- Keyboard collection
+- Local visual prediction
+- Rendering and interpolation
+- UI state unrelated to game authority
+- Reconnect token storage
+
+### 16.2 Global loop
+
+Use one process-level scheduler for all rooms, not one `setInterval` per board.
+
+Recommended structure:
+
+```ts
+let previous = performance.now();
+let accumulator = 0;
+
+setInterval(() => {
+  const now = performance.now();
+  accumulator += Math.min(now - previous, 250);
+  previous = now;
+
+  while (accumulator >= TICK_MS) {
+    roomManager.fixedUpdate();
+    accumulator -= TICK_MS;
+  }
+}, TICK_MS);
+```
+
+The implementation must avoid depending on exact timer wake-up precision.
+
+### 16.3 Input processing
+
+- Each gameplay input has a player-local `sequence` integer.
+- Sequence starts at 1 after `match_started`.
+- Reject sequence numbers less than or equal to the last accepted sequence.
+- Queue accepted inputs and apply them in sequence order at the start of a simulation tick.
+- Limit accepted gameplay input messages to 120 per second per player with a short burst allowance.
+- Ignore movement input before the match start tick or after elimination.
+- Treat hard drop and hold as edge-triggered actions.
+
+### 16.4 Snapshot rate
+
+- Simulation: 60 Hz.
+- Normal room snapshots while playing: 20 Hz.
+- Lobby snapshots: on change plus a 5-second heartbeat.
+- Send an immediate snapshot after join, reconnect, elimination, phase change, or match finish.
+- Full authoritative snapshots are acceptable for the MVP.
+
+Do not send snapshots at 60 Hz.
+
+---
+
+## 17. WebSocket protocol
+
+### 17.1 Transport rules
+
+- Endpoint: `/ws`.
+- Use secure `wss://` automatically when the page uses HTTPS.
+- Messages are JSON UTF-8 text for the MVP.
+- Every message has a `type` string.
+- Client and server validate all inbound messages.
+- Maximum inbound message size: 16 KiB.
+- Close malformed or abusive connections after repeated violations.
+
+### 17.2 Protocol version
+
+```ts
+export const PROTOCOL_VERSION = 1;
+```
+
+The first client message must be `hello`. Reject incompatible versions.
+
+### 17.3 Client-to-server messages
+
+```ts
+type ClientMessage =
+  | {
+      type: "hello";
+      protocolVersion: 1;
+      clientId: string;
+    }
+  | {
+      type: "create_room";
+      requestId: string;
+      displayName: string;
+    }
+  | {
+      type: "join_room";
+      requestId: string;
+      roomCode: string;
+      displayName: string;
+      reconnectToken?: string;
+    }
+  | {
+      type: "set_ready";
+      ready: boolean;
+    }
+  | {
+      type: "start_match";
+    }
+  | {
+      type: "input";
+      matchId: string;
+      sequence: number;
+      action:
+        | "move_left"
+        | "move_right"
+        | "soft_drop"
+        | "hard_drop"
+        | "rotate_cw"
+        | "rotate_ccw"
+        | "hold";
+    }
+  | {
+      type: "return_to_lobby";
+    }
+  | {
+      type: "leave_room";
+    }
+  | {
+      type: "ping";
+      nonce: string;
+      clientTime: number;
+    };
+```
+
+### 17.4 Server-to-client messages
+
+```ts
+type ServerMessage =
+  | {
+      type: "hello_ack";
+      protocolVersion: 1;
+      serverTime: number;
+    }
+  | {
+      type: "room_joined";
+      requestId: string;
+      roomCode: string;
+      playerId: string;
+      reconnectToken: string;
+      hostPlayerId: string;
+    }
+  | {
+      type: "room_snapshot";
+      snapshot: RoomSnapshot;
+    }
+  | {
+      type: "match_started";
+      matchId: string;
+      seed: string;
+      startTick: number;
+      serverTime: number;
+    }
+  | {
+      type: "error";
+      requestId?: string;
+      code: ErrorCode;
+      message: string;
+      recoverable: boolean;
+    }
+  | {
+      type: "pong";
+      nonce: string;
+      clientTime: number;
+      serverTime: number;
+    };
+```
+
+### 17.5 Snapshot shape
+
+For the MVP, encode each board as a row-major `number[]` of length 240. Values:
+
+- `0`: empty
+- `1`: I
+- `2`: J
+- `3`: L
+- `4`: O
+- `5`: S
+- `6`: T
+- `7`: Z
+- `8`: garbage
+
+```ts
+interface RoomSnapshot {
+  protocolVersion: 1;
+  roomCode: string;
+  phase: RoomPhase;
+  hostPlayerId: string;
+  serverTick: number;
+  serverTime: number;
+  countdownEndsAt?: number;
+  matchId?: string;
+  winnerPlayerIds?: string[];
+  players: PlayerSnapshot[];
+}
+
+interface PlayerSnapshot {
+  playerId: string;
+  displayName: string;
+  shortId: string;
+  joinedAt: number;
+  connected: boolean;
+  ready: boolean;
+  isHost: boolean;
+  matchState: PlayerMatchState;
+  placement?: number;
+  eliminatedAtTick?: number;
+  board?: number[];
+  activePiece?: {
+    kind: PieceKind;
+    x: number;
+    y: number;
+    rotation: 0 | 1 | 2 | 3;
+  };
+  hold?: PieceKind;
+  next?: PieceKind[];
+  score?: number;
+  lines?: number;
+  level?: number;
+  combo?: number;
+  backToBack?: boolean;
+  incomingGarbage?: number;
+  lastProcessedInput?: number;
+}
+```
+
+Fields not relevant in the lobby may be omitted.
+
+### 17.6 Error codes
+
+```ts
+type ErrorCode =
+  | "INVALID_MESSAGE"
+  | "PROTOCOL_MISMATCH"
+  | "NOT_JOINED"
+  | "ROOM_NOT_FOUND"
+  | "ROOM_FULL"
+  | "MATCH_IN_PROGRESS"
+  | "INVALID_NAME"
+  | "NOT_HOST"
+  | "NOT_READY"
+  | "INSUFFICIENT_PLAYERS"
+  | "INVALID_PHASE"
+  | "INVALID_RECONNECT_TOKEN"
+  | "RATE_LIMITED"
+  | "INTERNAL_ERROR";
+```
+
+Errors shown to users must be understandable. Internal stack traces must never be sent to clients.
+
+---
+
+## 18. Reconnection
+
+### 18.1 Token
+
+- Issue a cryptographically random reconnect token when a room session is created.
+- Token length: at least 128 bits of entropy.
+- Store it in `localStorage`, scoped by room code.
+- Never put the token in a URL.
+- Compare tokens without logging them.
+
+### 18.2 Grace period
+
+- Reconnect grace period: 20 seconds.
+- On unexpected close, mark the player disconnected and record `reconnectDeadline`.
+- Keep their room slot and current engine state.
+- Their game continues to advance.
+- A valid reconnect replaces the old socket and receives an immediate full snapshot.
+- If an old socket is still open, close it with a replacement-session code.
+- When the deadline expires during a match, eliminate the player.
+- When it expires in the lobby, remove the session.
+
+### 18.3 Client retry
+
+Use exponential backoff with jitter:
+
+```text
+0.5 s, 1 s, 2 s, 4 s, then 5 s maximum
+```
+
+Stop automatic attempts after the server rejects the reconnect token or the room no longer exists. Show a visible connection state at all times.
+
+---
+
+## 19. Client prediction and reconciliation
+
+Prediction is required for the local active piece but not for opponents.
+
+### 19.1 Local flow
+
+1. Assign a sequence number to the input.
+2. Apply the input immediately to a client-side prediction engine.
+3. Send the input to the server.
+4. Receive a snapshot containing `lastProcessedInput`.
+5. Replace predicted state with the authoritative local state.
+6. Remove acknowledged inputs.
+7. Reapply unacknowledged inputs in order.
+
+The client prediction engine must use the same pure movement and collision functions as the server where practical. It must not independently advance authoritative line clears, score, garbage targeting, or match outcome.
+
+### 19.2 Opponent rendering
+
+- Render opponents directly from snapshots.
+- Interpolate active-piece Y movement between recent snapshots for visual smoothness.
+- Never extrapolate an opponent for more than 150 ms.
+- Snap to the newest authoritative state after a line clear, hard drop, garbage rise, or elimination.
+
+### 19.3 Clock offset
+
+Estimate server clock offset from `ping`/`pong` round trips using the sample with the lowest recent round-trip time. Display latency as informational only.
+
+---
+
+## 20. Backpressure and connection health
+
+- Configure Bun WebSocket idle timeout appropriately for game sessions.
+- Send application-level ping messages every 5 seconds while connected.
+- Consider the connection stale after 15 seconds without any server message.
+- Do not enqueue unlimited snapshots for a slow client.
+- If `send` indicates backpressure, mark the socket congested and skip replaceable snapshots.
+- On the WebSocket `drain` callback, send only the newest pending snapshot.
+- Critical messages such as `room_joined`, `error`, and phase transitions must not be silently discarded.
+- Close persistently congested connections cleanly.
+
+---
+
+## 21. HTTP and static SPA behavior
+
+Required HTTP routes:
+
+| Method | Route | Behavior |
+|---|---|---|
+| GET | `/health` | Return JSON `{ "status": "ok" }` |
+| GET | `/ws` | Upgrade valid WebSocket requests |
+| GET | `/assets/*` | Serve built static assets with correct MIME type and cache headers |
+| GET | `/*` | Serve the SPA fallback for client-side routes |
+
+Production cache policy:
+
+- Fingerprinted JS/CSS/assets: `public, max-age=31536000, immutable`.
+- SPA HTML fallback: `no-cache`.
+- Health endpoint: `no-store`.
+
+Development may use Vite for the frontend and Bun watch mode for the server, but `bun run dev` must start the complete application with one command.
+
+---
+
+## 22. User interface requirements
+
+### 22.1 Home
+
+- Original game title and visual identity.
+- Display-name input.
+- **Create room** button.
+- Room-code input and **Join room** button.
+- Keyboard-control summary.
+- Inline validation and server errors.
+
+### 22.2 Lobby
+
+- Room code and copy invite button.
+- Player list with host, ready, and connection indicators.
+- Local ready toggle.
+- Start button visible to host.
+- Start button disabled with an explanatory reason when conditions are unmet.
+- Maximum capacity indicator, e.g. `4 / 6`.
+
+### 22.3 Game grid
+
+For six players on desktop, use a 3 × 2 grid. For fewer players, use the largest readable balanced grid.
+
+```text
+6 players: 3 columns × 2 rows
+5 players: 3 columns, centered final row
+4 players: 2 × 2
+3 players: 3 × 1 or 2 + 1 depending on width
+2 players: 2 × 1
+```
+
+Requirements:
+
+- The local board is visually emphasized.
+- Every card shows player name, status, board, incoming garbage, score, and connection status.
+- Local card additionally shows hold, five-piece preview, and controls.
+- Boards preserve a 1:2 visible aspect ratio.
+- Board sizing responds to viewport changes without recreating the game session.
+- Canvas rendering must account for `devicePixelRatio` for sharp output.
+
+### 22.4 Countdown
+
+Show `3`, `2`, `1`, `GO` based on server time, not local timers alone.
+
+### 22.5 Results
+
+Show:
+
+- Winner or draw
+- Placement
+- Score
+- Lines cleared
+- Attack sent
+- Maximum combo
+- Disconnect status if relevant
+
+The host receives a **Return to lobby** button. Other players see a waiting state.
+
+### 22.6 Accessibility
+
+- All non-canvas controls are keyboard accessible.
+- Buttons and inputs have visible focus styles.
+- Do not communicate status only through color.
+- Canvas has an accessible label describing whose board it is and current status.
+- Respect `prefers-reduced-motion` for nonessential animations.
+- Use sufficient text/background contrast.
+
+---
+
+## 23. Visual and audio direction
+
+- Use an original neutral arcade visual style.
+- Do not copy logos, layouts, sound effects, fonts, or branded visual treatments from commercial Tetris products.
+- Tetromino colors must be configurable in one theme module.
+- Sound is optional for the MVP. If included, it must have a mute control and use original or permissively licensed assets.
+
+---
+
+## 24. Security and abuse resistance
+
+- Validate every client message at runtime.
+- Enforce room membership on all room actions.
+- Enforce host authorization on start and return-to-lobby actions.
+- Rate-limit connection attempts per IP using an in-memory sliding window.
+- Rate-limit room creation per IP.
+- Rate-limit gameplay input per session.
+- Cap inbound message size.
+- Reject unexpected object keys where practical.
+- Do not deserialize executable data.
+- Do not use `eval`, `new Function`, or dynamic code loading.
+- Generate IDs and tokens with cryptographic randomness.
+- Do not log reconnect tokens or complete IP addresses at normal log level.
+- Escape all user-supplied strings.
+- Configure production origin checking for WebSocket upgrades using `ALLOWED_ORIGINS`.
+- Return generic internal errors to clients and structured details only in server logs.
+
+Because the MVP is single-process and unauthenticated, room codes are convenience secrets, not strong access control.
+
+---
+
+## 25. Configuration
+
+Environment variables:
+
+| Name | Default | Description |
+|---|---:|---|
+| `PORT` | `3000` | HTTP/WebSocket port |
+| `HOST` | `0.0.0.0` | Bind host |
+| `NODE_ENV` | `development` | Runtime mode |
+| `PUBLIC_BASE_URL` | inferred | Invite-link origin |
+| `ALLOWED_ORIGINS` | local origin in dev | Comma-separated accepted WebSocket origins |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error` |
+| `ROOM_EMPTY_TTL_MS` | `300000` | Empty room expiry |
+| `RECONNECT_GRACE_MS` | `20000` | Reconnect grace period |
+
+Parse configuration once at startup, validate it, and fail fast on invalid values.
+
+---
+
+## 26. Logging and observability
+
+Use structured JSON logs in production and readable logs in development.
+
+Log events:
+
+- Server started and stopped
+- Room created and deleted
+- Player joined, reconnected, disconnected, and removed
+- Host migrated
+- Match countdown, start, finish, and result
+- Protocol validation failure counts
+- Rate-limit events
+- Unexpected server errors
+
+Never log every simulation tick or ordinary movement input at info level.
+
+`GET /health` verifies process liveness. It does not need to inspect every room.
+
+---
+
+## 27. Performance targets
+
+On a typical modern laptop running one Bun process:
+
+- Support at least 50 simultaneous six-player rooms in a synthetic server test without simulation falling more than 100 ms behind for sustained periods.
+- Keep average server tick work below 8 ms at that load.
+- Keep a normal full six-player JSON snapshot under 20 KiB where practical.
+- Keep normal outbound traffic below approximately 400 KiB/s per six-player room at 20 snapshots/s.
+- Maintain 60 FPS rendering on a current desktop browser with six visible boards.
+- Avoid per-frame Svelte object churn for board cells; Canvas drawing should consume compact arrays.
+
+These are engineering targets, not a commitment to horizontal scaling.
+
+---
+
+## 28. Test requirements
+
+### 28.1 Game engine unit tests
+
+At minimum:
+
+- Seven-bag contains every piece exactly once per bag.
+- Same seed produces the same sequence.
+- Different seeds generally produce different sequences.
+- Collision against walls, floor, and occupied cells.
+- Clockwise and counterclockwise rotations with SRS kicks.
+- Hold restrictions and swap behavior.
+- Gravity accumulation.
+- Lock delay and reset limit.
+- Single, double, triple, and four-line clears.
+- Combo and back-to-back progression.
+- T-spin classification.
+- Perfect clear detection.
+- Garbage cancellation and delayed application.
+- Spawn collision and garbage top-out.
+- Deterministic replay of a known input sequence.
+
+### 28.2 Room/server unit tests
+
+- Code generation and collision retry.
+- Capacity enforcement.
+- Ready and start authorization.
+- Three-second countdown transition.
+- Host migration.
+- Join rejection during active match.
+- Reconnect success and invalid-token rejection.
+- Grace-period elimination/removal.
+- Input sequence deduplication.
+- Input rate limiting.
+- Simultaneous elimination and draw handling.
+- Room cleanup.
+- Snapshot validation against shared schema.
+
+### 28.3 Frontend tests
+
+- Home form validation.
+- Lobby ready state and disabled start reason.
+- Board canvas resize behavior.
+- Keyboard input mapping and DAS/ARR.
+- Reconnect status transitions.
+- Prediction reconciliation with acknowledged and pending inputs.
+
+### 28.4 End-to-end tests
+
+Use Playwright browser contexts to verify:
+
+1. Player A creates a room.
+2. Player B joins by code.
+3. Both ready; host starts.
+4. Both receive the same match ID and countdown.
+5. Input from A changes A’s board on both clients.
+6. B disconnects and reconnects within the grace period.
+7. An intentionally scripted top-out finishes the match.
+8. Both clients display the same winner.
+9. Host returns the room to the lobby.
+
+A test-only server control may inject deterministic board fixtures, but it must be unavailable in production builds.
+
+---
+
+## 29. Required scripts
+
+The root `package.json` must provide:
+
+```json
+{
+  "scripts": {
+    "dev": "...",
+    "build": "...",
+    "start": "...",
+    "check": "...",
+    "typecheck": "...",
+    "lint": "...",
+    "format": "...",
+    "test": "...",
+    "test:watch": "...",
+    "test:e2e": "...",
+    "verify": "..."
+  }
+}
+```
+
+Expected behavior:
+
+- `bun run dev`: starts frontend and server development processes.
+- `bun run build`: produces the static client and production server artifacts.
+- `bun run start`: runs the production Bun server.
+- `bun run check`: runs Svelte checks.
+- `bun run typecheck`: runs TypeScript without emitting.
+- `bun run lint`: checks formatting and lint rules.
+- `bun run format`: formats the repository.
+- `bun test`: runs unit tests.
+- `bun run test:e2e`: runs Playwright tests.
+- `bun run verify`: runs all non-watch quality gates in a stable order.
+
+---
+
+## 30. Build and deployment
+
+The production build must be runnable as:
+
+```bash
+bun install --frozen-lockfile
+bun run build
+bun run start
+```
+
+Provide a multi-stage Dockerfile as an optional deployment path. The final image must:
+
+- Run as a non-root user.
+- Expose the configured port.
+- Include only production files and built assets.
+- Provide a health check against `/health`.
+- Handle `SIGTERM` by stopping new joins, closing sockets, and exiting promptly.
+
+No database or external service is required.
+
+---
+
+## 31. Implementation milestones
+
+### Milestone 1: Repository and deterministic local engine
+
+Deliver:
+
+- Bun/Svelte project skeleton
+- Shared strict TypeScript configuration
+- Pure game engine
+- Canvas single-player renderer
+- Keyboard controls
+- Engine tests
+
+Exit criteria:
+
+- One local player can play a complete game.
+- Engine tests cover board, pieces, rotation, lock, and line clearing.
+- Same seed plus same inputs produces identical state hashes.
+
+### Milestone 2: Rooms and lobby
+
+Deliver:
+
+- Bun HTTP/WebSocket server
+- Protocol schemas
+- Room manager
+- Create/join/leave
+- Host and ready state
+- Static SPA serving
+
+Exit criteria:
+
+- Six browser tabs can join one room.
+- Capacity, host migration, and invalid messages are tested.
+
+### Milestone 3: Authoritative multiplayer match
+
+Deliver:
+
+- Global fixed-timestep loop
+- Per-player authoritative engines
+- Countdown
+- Input sequencing
+- Snapshots
+- Six-board grid
+- Match finish
+
+Exit criteria:
+
+- Two to six clients can complete a match and agree on the winner.
+- Clients cannot submit board or score state.
+
+### Milestone 4: Competitive rules
+
+Deliver:
+
+- Garbage attacks
+- Cancellation
+- Automatic targeting
+- Combo, back-to-back, T-spin, and perfect clear logic
+- Incoming-garbage UI
+
+Exit criteria:
+
+- Attack calculations and deterministic targeting are unit tested.
+- Scripted attacks produce identical results across repeated runs.
+
+### Milestone 5: Network resilience and responsiveness
+
+Deliver:
+
+- Local prediction and reconciliation
+- Opponent interpolation
+- Ping/latency estimation
+- Backpressure handling
+- Reconnection and grace period
+
+Exit criteria:
+
+- Local movement remains visually immediate under simulated 100 ms latency.
+- Reconnect within 20 seconds restores the session.
+- Slow clients do not create unbounded snapshot queues.
+
+### Milestone 6: Hardening and release
+
+Deliver:
+
+- Rate limits and origin checks
+- Accessibility pass
+- Playwright multiplayer tests
+- Performance test harness
+- Dockerfile
+- README with setup, architecture, controls, and limitations
+
+Exit criteria:
+
+- `bun run verify` passes from a clean checkout.
+- Production build runs with one command.
+- No critical or high-severity dependency findings remain without documentation.
+
+---
+
+## 32. Acceptance criteria
+
+The implementation is accepted when all statements are true:
+
+1. A new user can create a room and copy a working invite URL.
+2. Between two and six users can join from separate browser contexts.
+3. A seventh player is rejected without disrupting the room.
+4. Only the host can start a match or return results to the lobby.
+5. A match cannot start until all connected players are ready.
+6. Every client displays every active board in a responsive grid.
+7. The server alone decides piece generation, board state, attacks, elimination, and winner.
+8. Clients send actions, never board states or scores.
+9. The simulation advances at a fixed 60 Hz and snapshots are normally sent at 20 Hz.
+10. The local board uses prediction and reconciliation.
+11. A disconnected player can reconnect with their token within 20 seconds.
+12. Host migration works when the host permanently leaves.
+13. Garbage cancellation, targeting, and delivery follow this specification.
+14. Match results are identical on all connected clients.
+15. Invalid messages, duplicate input sequences, and excessive input rates are rejected safely.
+16. Static Svelte assets and `/ws` are served by the same Bun application in production.
+17. `bun run verify` passes.
+18. The repository contains current `README.md`, `SPEC.md`, and `AGENTS.md` files.
+
+---
+
+## 33. Future extensions
+
+These are explicitly deferred but the architecture should not make them impossible:
+
+- Spectators
+- Private room passwords
+- Custom controls
 - Touch controls
+- Replays from seed and input log
+- Ranked matchmaking
+- Persistent accounts and statistics
+- Multiple attack targeting modes
+- Binary snapshots and delta compression
+- Horizontal room sharding
+- Regional servers
 - Gamepad support
-- Custom rule presets
-- Ranked server-authoritative mode
-- Voice chat
-- Public/private room codes
-- Tournament brackets
+
+Do not implement future extensions until the MVP acceptance criteria pass.
+
+---
+
+## 34. Technical references
+
+Use current official documentation during implementation:
+
+- Bun server-side WebSockets: https://bun.com/docs/runtime/http/websockets
+- Bun HTTP server: https://bun.com/docs/runtime/http/server
+- Bun HTML and static sites: https://bun.com/docs/bundler/html-static
+- SvelteKit SPA guidance: https://svelte.dev/docs/kit/single-page-apps
+- SvelteKit static adapter: https://svelte.dev/docs/kit/adapter-static
+- Svelte lifecycle: https://svelte.dev/docs/svelte/lifecycle-hooks
+
+When the current official API differs from an example or assumption in this specification, preserve the required behavior and adapt the implementation to the official API.
+
+---
+
+## 35. Implementation clarifications
+
+The following rules resolve details that must remain consistent across the
+engine, server, client, and tests.
+
+### 35.1 Time domains
+
+- `serverTick` is the authoritative simulation clock and advances only in
+  fixed 60 Hz steps.
+- Protocol `serverTime`, `countdownEndsAt`, and `reconnectDeadline` values are
+  Unix epoch milliseconds.
+- Game rules must not read wall-clock time. The server converts elapsed wall
+  time into bounded fixed-timestep updates before calling the room simulation.
+
+### 35.2 Deterministic player queues
+
+- A match has one authoritative match seed.
+- Each player receives an independent deterministic seven-bag stream derived
+  from the match seed and their stable roster index.
+- A player’s stream must not depend on object-key iteration order, socket order,
+  or wall-clock values.
+- The match seed and roster order are sufficient to reproduce every initial
+  piece sequence.
+
+### 35.3 Board snapshot indexing
+
+- A serialized board is row-major with exactly 240 values for 10 × 24 cells.
+- Rows `0` through `3` are hidden spawn rows.
+- Canvas rendering displays rows `4` through `23` and never draws hidden rows.
+- The board coordinate origin remains the top-left of the internal board.
+
+### 35.4 Tick resolution order
+
+For every authoritative tick, the server must resolve events in this order:
+
+1. Apply room lifecycle transitions scheduled for the tick.
+2. Apply accepted inputs grouped by player join order, then input sequence.
+3. Advance gravity and lock timers for each active player.
+4. Resolve locks, line clears, scoring, and outgoing attacks.
+5. Cancel incoming garbage and enqueue remaining attacks.
+6. Retarget delayed attacks whose target is no longer valid.
+7. Apply ready garbage after the current piece resolution.
+8. Resolve top-outs and disconnect expirations.
+9. Resolve match completion and simultaneous final eliminations.
+10. Increment or finalize the tick state.
+
+Players eliminated on one tick are resolved as a group. Stable player join order
+is used only where a deterministic iteration order is otherwise required.
+
+### 35.5 Snapshot lifecycle
+
+- `room_snapshot.phase` is authoritative for lobby, countdown, playing, and
+  finished states.
+- `match_started` announces the match identifier, seed, and authoritative start
+  tick; it does not replace snapshots as the source of current state.
+- Finished snapshots contain winner, draw, placement, and match statistics.
+- Returning to the lobby clears match-only fields and sets every connected
+  player to unready.
+
+### 35.6 Reconnection phases
+
+- A session may reconnect during lobby, countdown, or playing while its grace
+  period is active.
+- Reconnection during finished state restores room visibility but never resumes
+  gameplay.
+- An invalid or expired token returns `INVALID_RECONNECT_TOKEN` without
+  revealing whether another session or token exists.
+
+### 35.7 Test-only controls
+
+- Deterministic board fixtures may be injected only through test-created room or
+  server objects.
+- Production HTTP routes, WebSocket messages, and builds must not register or
+  expose fixture injection controls.
+- End-to-end tests may use an isolated deterministic test configuration, but it
+  must not change production authority or protocol behavior.
