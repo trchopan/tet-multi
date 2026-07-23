@@ -85,6 +85,24 @@ docker build -t neon-drop .
 docker run --rm -p 3000:3000 -e ALLOWED_ORIGINS=http://localhost:3000 neon-drop
 ```
 
+### Deployment on `your-server`
+
+The deployment uses Docker Compose and publishes the Bun process on host port
+`8780`, which is already exposed through Cloudflare at `https://tet.chop.dev`.
+The production origin and WebSocket origin check are configured in
+`docker-compose.yml`.
+
+```bash
+rsync -az --delete --exclude .git --exclude node_modules --exclude build \
+  --exclude .svelte-kit --exclude test-results --exclude .ticket-runs \
+  ./ deploy-user@your-server.example.com:~/your-app-directory/
+ssh deploy-user@your-server.example.com \
+  'cd ~/your-app-directory && docker compose up -d --build'
+```
+
+Verify the deployment with `curl https://tet.chop.dev/health` and
+`docker compose -f ~/your-app-directory/docker-compose.yml ps` on the host.
+
 ## Implementation Decisions
 
 - The foundation uses a small Bun HTTP handler instead of an additional HTTP

@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: your-app-directory
+    restart: unless-stopped
+    ports:
+      - "8780:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      PUBLIC_BASE_URL: https://tet.chop.dev
+      ALLOWED_ORIGINS: https://tet.chop.dev
+      LOG_LEVEL: info
