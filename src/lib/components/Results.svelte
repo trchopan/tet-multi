@@ -1,14 +1,17 @@
 <script lang="ts">
 	import type { RoomSnapshot } from '../../shared/types';
+	import type { ConnectionState } from '../client/websocket';
 
 	let {
 		snapshot,
 		localPlayerId,
 		onReturn,
+		connectionState = 'connected',
 	}: {
 		snapshot: RoomSnapshot;
 		localPlayerId: string;
 		onReturn: () => void;
+		connectionState?: ConnectionState;
 	} = $props();
 
 	const winners = $derived(
@@ -21,6 +24,15 @@
 
 <section class="results" aria-labelledby="results-title">
 	<p class="eyebrow">Match finished</p>
+	<p class="connection" role="status" aria-live="polite">
+		{connectionState === 'connected'
+			? 'Connected'
+			: connectionState === 'reconnecting'
+				? 'Connection lost, retrying…'
+				: connectionState === 'stale'
+					? 'Connection stale, reconnecting…'
+					: 'Disconnected'}
+	</p>
 	<h1 id="results-title">
 		{winners.length === 0
 			? 'Draw'
@@ -82,6 +94,10 @@
 		font-weight: 800;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
+	}
+	.connection {
+		color: #58e38c;
+		font-size: 0.85rem;
 	}
 	h1 {
 		margin: 0.3rem 0;

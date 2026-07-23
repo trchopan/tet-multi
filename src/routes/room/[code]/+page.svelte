@@ -84,12 +84,14 @@
 			onStart={() => session.startMatch()}
 			onLeave={() => session.leaveRoom()}
 			error={session.error}
+			connectionState={session.connectionState}
 		/>
 	{:else if session.snapshot.phase === 'finished'}
 		<Results
 			snapshot={session.snapshot}
 			localPlayerId={session.playerId}
 			onReturn={() => session.returnToLobby()}
+			connectionState={session.connectionState}
 		/>
 	{:else}
 		<section class="play-shell" aria-label="Neon Drop match">
@@ -122,6 +124,7 @@
 				players={session.snapshot.players}
 				localPlayerId={session.playerId}
 				onInput={session.snapshot.phase === 'playing' ? input : undefined}
+				renderPlayer={(player) => session.renderPlayer(player, now)}
 			/>
 			<p class="error" aria-live="polite">{session.error}</p>
 		</section>

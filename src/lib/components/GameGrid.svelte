@@ -6,10 +6,12 @@
 		players,
 		localPlayerId,
 		onInput,
+		renderPlayer,
 	}: {
 		players: PlayerSnapshot[];
 		localPlayerId: string;
 		onInput: ((action: InputAction) => void) | undefined;
+		renderPlayer: (player: PlayerSnapshot) => PlayerSnapshot;
 	} = $props();
 </script>
 
@@ -22,7 +24,7 @@
 	>
 		{#each players as player (player.playerId)}
 			<PlayerCard
-				{player}
+				player={renderPlayer(player)}
 				local={player.playerId === localPlayerId}
 				onInput={player.playerId === localPlayerId ? onInput : undefined}
 			/>

@@ -5,6 +5,7 @@ import { RoomManager } from './room-manager';
 import type { SocketLike } from './session';
 import { validateServerMessage } from '../shared/protocol';
 import type { GameEngineState } from '../game/engine';
+import { reconnectTokensEqual } from './session';
 
 class FakeSocket implements SocketLike {
 	messages: string[] = [];
@@ -24,6 +25,62 @@ const ids = (() => {
 })();
 
 describe('room lifecycle', () => {
+	test('compares reconnect tokens without accepting length or content mismatches', () => {
+		expect(reconnectTokensEqual('aabb', 'aabb')).toBe(true);
+		expect(reconnectTokensEqual('aabb', 'aabc')).toBe(false);
+		expect(reconnectTokensEqual('aabb', 'aabbx')).toBe(false);
+	});
+
+	test('reconnects before the deadline and rejects at the deadline', () => {
+		let now = 0;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			reconnectGraceMs: 20,
+			createId: ids,
+			createToken: () => 'reconnect-token',
+		});
+		const firstSocket = new FakeSocket();
+		const session = room.join('client', 'Alice', firstSocket, 0).session!;
+		room.disconnect(session.playerId, 0, firstSocket);
+		const replacement = new FakeSocket();
+		expect(
+			room.join('client', 'Alice', replacement, 19, session.reconnectToken)
+				.result,
+		).toEqual({ ok: true });
+		expect(room.players[0]?.connected).toBe(true);
+		room.disconnect(session.playerId, 20, replacement);
+		expect(
+			room.join('client', 'Alice', new FakeSocket(), 40, session.reconnectToken)
+				.result,
+		).toEqual({ ok: false, code: 'INVALID_RECONNECT_TOKEN' });
+	});
+
+	test('restores a countdown session to waiting after reconnect', () => {
+		let now = 0;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			reconnectGraceMs: 100,
+			createId: ids,
+			createToken: ids,
+		});
+		const firstSocket = new FakeSocket();
+		const secondSocket = new FakeSocket();
+		const first = room.join('a', 'Alice', firstSocket, now).session!;
+		const second = room.join('b', 'Bob', secondSocket, now).session!;
+		room.setReady(first.playerId, true);
+		room.setReady(second.playerId, true);
+		room.start(first.playerId, now);
+		room.disconnect(first.playerId, 10, firstSocket);
+		const replacement = new FakeSocket();
+		room.join('a', 'Alice', replacement, 20, first.reconnectToken);
+		const restored = room.players.find(
+			(player) => player.playerId === first.playerId,
+		);
+		expect(restored?.connected).toBe(true);
+		expect(restored?.matchState).toBe('waiting');
+	});
 	test('creates six sessions and rejects a seventh', () => {
 		const manager = new RoomManager({
 			randomBytes: () => Uint8Array.from([0, 1, 2, 3, 4, 5]),

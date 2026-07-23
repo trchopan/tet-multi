@@ -31,6 +31,7 @@ import type {
 } from '../shared/types';
 import {
 	createReconnectToken,
+	reconnectTokensEqual,
 	createSession,
 	type Session,
 	type SocketLike,
@@ -119,13 +120,13 @@ export class Room {
 		reconnectToken?: string,
 	): { session?: Session; result: RoomActionResult } {
 		if (reconnectToken !== undefined) {
-			const session = this.players.find(
-				(candidate) => candidate.reconnectToken === reconnectToken,
+			const session = this.players.find((candidate) =>
+				reconnectTokensEqual(candidate.reconnectToken, reconnectToken),
 			);
 			if (
 				session === undefined ||
 				(session.reconnectDeadline !== undefined &&
-					session.reconnectDeadline < now)
+					session.reconnectDeadline <= now)
 			)
 				return { result: { ok: false, code: 'INVALID_RECONNECT_TOKEN' } };
 			if (session.socket !== undefined && session.socket !== socket)
@@ -136,8 +137,11 @@ export class Room {
 				(player) => player.playerId === session.playerId,
 			);
 			if (matchPlayer !== undefined) matchPlayer.connected = true;
-			if (this.phase === 'playing' && session.matchState === 'disconnected')
-				session.matchState = 'playing';
+			if (session.matchState === 'disconnected') {
+				if (this.phase === 'playing') session.matchState = 'playing';
+				else if (this.phase === 'countdown' || this.phase === 'finished')
+					session.matchState = 'waiting';
+			}
 			delete session.reconnectDeadline;
 			if (this.hostPlayerId === '') this.hostPlayerId = session.playerId;
 			return { session, result: { ok: true } };

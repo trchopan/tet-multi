@@ -9,6 +9,7 @@
 		onStart,
 		onLeave,
 		error = '',
+		connectionState = 'connected',
 	}: {
 		snapshot: RoomSnapshot;
 		localPlayerId: string;
@@ -16,6 +17,8 @@
 		onStart: () => void;
 		onLeave: () => void;
 		error?: string;
+		connectionState?:
+			'connecting' | 'connected' | 'reconnecting' | 'stale' | 'closed';
 	} = $props();
 	let copied = $state(false);
 	let copyError = $state('');
@@ -67,6 +70,15 @@
 		</button>
 	</div>
 	<p class="capacity">{snapshot.players.length} / 6 players</p>
+	<p class="connection" role="status" aria-live="polite">
+		{connectionState === 'connected'
+			? 'Connected'
+			: connectionState === 'reconnecting'
+				? 'Connection lost, retrying…'
+				: connectionState === 'stale'
+					? 'Connection stale, reconnecting…'
+					: 'Disconnected'}
+	</p>
 	<ul class="players" aria-label="Players in room">
 		{#each snapshot.players as player}
 			<li class:local={player.playerId === localPlayerId}>
@@ -123,6 +135,11 @@
 		font-weight: 800;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
+	}
+	.connection {
+		margin: -0.7rem 0 1rem;
+		color: #58e38c;
+		font-size: 0.85rem;
 	}
 	h1 {
 		margin: 0.3rem 0 1rem;

@@ -17,6 +17,18 @@ export const createReconnectToken = (): string => {
 	);
 };
 
+export const reconnectTokensEqual = (
+	first: string,
+	second: string,
+): boolean => {
+	const length = Math.max(first.length, second.length);
+	let difference = first.length ^ second.length;
+	for (let index = 0; index < length; index += 1)
+		difference |=
+			(first.charCodeAt(index) || 0) ^ (second.charCodeAt(index) || 0);
+	return difference === 0;
+};
+
 export interface Session {
 	playerId: string;
 	clientId: string;
