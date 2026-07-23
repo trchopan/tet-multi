@@ -34,6 +34,31 @@ describe('engine scoring rules', () => {
 		expect(scorePlacement(0, 1, -1, false, 'mini', false).points).toBe(200);
 	});
 
+	test('uses the complete base attack table', () => {
+		expect(
+			[1, 2, 3, 4].map(
+				(lines) => scorePlacement(lines, 0, -1, false, 'none', false).attack,
+			),
+		).toEqual([0, 1, 2, 4]);
+		expect(scorePlacement(1, 0, -1, false, 'mini', false).attack).toBe(1);
+		expect(
+			[1, 2, 3].map(
+				(lines) => scorePlacement(lines, 0, -1, false, 'full', false).attack,
+			),
+		).toEqual([2, 4, 6]);
+	});
+
+	test('applies combo, back-to-back, and perfect-clear attack bonuses', () => {
+		expect(
+			[-1, 0, 1, 2, 3, 4, 5, 6, 7, 8].map(
+				(combo) => scorePlacement(1, 0, combo, false, 'none', false).attack,
+			),
+		).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
+		expect(scorePlacement(4, 0, -1, true, 'none', false).attack).toBe(5);
+		expect(scorePlacement(1, 0, -1, false, 'none', true).attack).toBe(10);
+		expect(scorePlacement(1, 0, -1, true, 'full', true).attack).toBe(13);
+	});
+
 	test('classifies full and mini T-spins from final corners', () => {
 		const full = createEmptyBoard();
 		setCell(full, 3, 0, 8);

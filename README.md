@@ -67,14 +67,16 @@ reserves `/ws` for the later native WebSocket implementation.
 - SRS rotation uses standard JLSTZ and I kick tables, while O remains visually
   stable. The pure engine owns fixed-tick gravity, lock delay, hold, preview,
   line clearing, scoring, combo, back-to-back, T-spin, and perfect-clear state.
-- Garbage attacks and gameplay UI remain deferred to their dependent tickets;
-  scoring exposes the calculated attack amount without applying network garbage.
+- Garbage packets use a 30-tick activation delay, FIFO cancellation, and one
+  deterministic hole per packet. Pure match rules use an explicit room PRNG for
+  target selection, retarget delayed attacks when needed, and assign stable
+  elimination placements with same-tick draws.
 
 ## Current Limitations
 
 The current phase does not yet include rooms, WebSockets, keyboard controls, or
-Canvas rendering. Garbage delivery and network attack targeting remain deferred
-to ticket 005.
+Canvas rendering. Server integration of the pure match rules remains deferred to
+ticket 008.
 
 Browser-based E2E tests are deferred to ticket 012; `bun run test:e2e` exits
 successfully with that status until those tests are introduced.

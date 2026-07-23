@@ -47,6 +47,15 @@ export const nextRandom = (random: RandomState): number => {
 const nextIndex = (random: RandomState, exclusiveMaximum: number): number =>
 	Math.floor(nextRandom(random) * exclusiveMaximum);
 
+export const nextRandomIndex = (
+	random: RandomState,
+	exclusiveMaximum: number,
+): number => {
+	if (!Number.isInteger(exclusiveMaximum) || exclusiveMaximum <= 0)
+		throw new RangeError('exclusiveMaximum must be a positive integer');
+	return nextIndex(random, exclusiveMaximum);
+};
+
 const refillBag = (random: RandomState): PieceKind[] => {
 	const bag = [...PIECE_KINDS];
 	for (let index = bag.length - 1; index > 0; index -= 1) {

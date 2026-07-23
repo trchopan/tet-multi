@@ -217,6 +217,15 @@ describe('deterministic engine foundation', () => {
 		expect(state.lastPlacement?.perfectClear).toBe(true);
 	});
 
+	test('locking with a blocked next spawn causes a game over', () => {
+		const state = createEngineState('spawn-collision-seed');
+		state.activePiece = { kind: 'O', x: 4, y: 22, rotation: 0 };
+		for (let x = 0; x < 6; x += 1) setCell(state.board, x, 0, 8);
+		for (let x = 0; x < BOARD_WIDTH - 1; x += 1) setCell(state.board, x, 1, 8);
+		expect(lockActivePiece(state)).toBe(true);
+		expect(state.gameOver).toBe(true);
+	});
+
 	test('a scripted input replay remains deterministic', () => {
 		const first = createEngineState('known-replay', 2);
 		const second = createEngineState('known-replay', 2);

@@ -2,6 +2,7 @@ import {
 	BOARD_CELL_COUNT,
 	BOARD_INTERNAL_HEIGHT,
 	BOARD_WIDTH,
+	GARBAGE_CELL_VALUE,
 	SNAPSHOT_CELL_VALUES,
 } from '../shared/constants';
 import type { PieceKind } from '../shared/types';
@@ -126,6 +127,27 @@ export const clearLines = (board: BoardState): number => {
 	}
 	board.cells = kept.flat();
 	return cleared;
+};
+
+export const addGarbage = (
+	board: BoardState,
+	lines: number,
+	hole: number,
+): boolean => {
+	if (!Number.isInteger(lines) || lines < 1 || lines > BOARD_INTERNAL_HEIGHT)
+		throw new RangeError('Garbage lines are outside the board range');
+	if (!Number.isInteger(hole) || hole < 0 || hole >= BOARD_WIDTH)
+		throw new RangeError('Garbage hole is outside the board width');
+
+	const topRows = board.cells.slice(0, lines * BOARD_WIDTH);
+	const topOut = topRows.some((cell) => cell !== 0);
+	const shifted = board.cells.slice(lines * BOARD_WIDTH);
+	for (let row = 0; row < lines; row += 1) {
+		for (let x = 0; x < BOARD_WIDTH; x += 1)
+			shifted.push(x === hole ? 0 : GARBAGE_CELL_VALUE);
+	}
+	board.cells = shifted;
+	return topOut;
 };
 
 export const isBoardEmpty = (board: BoardState): boolean =>

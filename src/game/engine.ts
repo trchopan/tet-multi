@@ -1,5 +1,7 @@
 import {
 	BOARD_CELL_COUNT,
+	BOARD_INTERNAL_HEIGHT,
+	BOARD_WIDTH,
 	NEXT_PREVIEW_COUNT,
 	SNAPSHOT_CELL_VALUES,
 } from '../shared/constants';
@@ -14,6 +16,14 @@ import {
 	type BoardState,
 	type PiecePosition,
 } from './board';
+import {
+	applyGarbage as applyGarbagePackets,
+	cancelGarbage,
+	createGarbagePacket,
+	enqueueGarbage as enqueuePacket,
+	removeReadyGarbage,
+	type GarbagePacket,
+} from './garbage';
 import {
 	cloneSevenBag,
 	createSevenBag,
@@ -54,20 +64,23 @@ export interface GameEngineState {
 	maxCombo: number;
 	backToBack: boolean;
 	lastPlacement?: PlacementScore;
+	currentTick: number;
+	incomingGarbage: GarbagePacket[];
 	gameOver: boolean;
 }
 
 interface SerializedEngineState extends Omit<
 	GameEngineState,
-	'board' | 'bag' | 'lastPlacement'
+	'board' | 'bag' | 'lastPlacement' | 'incomingGarbage'
 > {
-	version: 2;
+	version: 3;
 	board: BoardCell[];
 	bag: SevenBagState;
 	lastPlacement?: PlacementScore;
+	incomingGarbage: GarbagePacket[];
 }
 
-const ENGINE_STATE_VERSION = 2 as const;
+const ENGINE_STATE_VERSION = 3 as const;
 
 const createActivePiece = (kind: PieceKind): ActivePiece => {
 	const definition = getPieceDefinition(kind);
@@ -120,6 +133,8 @@ export const createEngineState = (
 		combo: -1,
 		maxCombo: -1,
 		backToBack: false,
+		currentTick: 0,
+		incomingGarbage: [],
 		gameOver: false,
 	};
 	if (!canPlacePiece(state.board, state.activePiece)) state.gameOver = true;
@@ -133,6 +148,7 @@ export const cloneEngineState = (state: GameEngineState): GameEngineState => {
 		activePiece: { ...state.activePiece },
 		bag: cloneSevenBag(state.bag),
 		next: [...state.next],
+		incomingGarbage: state.incomingGarbage.map((packet) => ({ ...packet })),
 	};
 	if (state.lastPlacement) clone.lastPlacement = { ...state.lastPlacement };
 	return clone;
@@ -220,6 +236,11 @@ const lockAndSpawn = (state: GameEngineState): PlacementScore | undefined => {
 	state.maxCombo = Math.max(state.maxCombo, state.combo);
 	state.backToBack = placement.backToBack;
 	state.lastPlacement = placement;
+	const ready = removeReadyGarbage(state.incomingGarbage, state.currentTick);
+	if (ready.length > 0 && applyGarbagePackets(state.board, ready)) {
+		state.gameOver = true;
+		return placement;
+	}
 	state.activePiece = createActivePiece(drawQueuePiece(state));
 	state.holdUsed = false;
 	resetPieceTimers(state);
@@ -231,6 +252,28 @@ const lockAndSpawn = (state: GameEngineState): PlacementScore | undefined => {
 
 export const lockActivePiece = (state: GameEngineState): boolean =>
 	lockAndSpawn(state) !== undefined;
+
+export const enqueueGarbage = (
+	state: GameEngineState,
+	lines: number,
+	hole: number,
+	createdTick = state.currentTick,
+): void => {
+	enqueuePacket(
+		state.incomingGarbage,
+		createGarbagePacket(lines, hole, createdTick),
+	);
+};
+
+export const enqueueGarbagePacket = (
+	state: GameEngineState,
+	packet: GarbagePacket,
+): void => enqueuePacket(state.incomingGarbage, packet);
+
+export const cancelIncomingGarbage = (
+	state: GameEngineState,
+	lines: number,
+): number => cancelGarbage(state.incomingGarbage, lines);
 
 export const hardDrop = (state: GameEngineState): number => {
 	if (state.gameOver) return 0;
@@ -307,6 +350,7 @@ export const advanceTicks = (state: GameEngineState, ticks: number): void => {
 	if (!Number.isInteger(ticks) || ticks < 0)
 		throw new RangeError('ticks must be a non-negative integer');
 	for (let tick = 0; tick < ticks && !state.gameOver; tick += 1) {
+		state.currentTick += 1;
 		state.gravityMs += TICK_MS;
 		while (state.gravityMs >= gravityIntervalMs(state.level)) {
 			state.gravityMs -= gravityIntervalMs(state.level);
@@ -351,6 +395,8 @@ const serializedState = (state: GameEngineState): SerializedEngineState => ({
 	combo: state.combo,
 	maxCombo: state.maxCombo,
 	backToBack: state.backToBack,
+	currentTick: state.currentTick,
+	incomingGarbage: state.incomingGarbage.map((packet) => ({ ...packet })),
 	...(state.lastPlacement ? { lastPlacement: { ...state.lastPlacement } } : {}),
 	gameOver: state.gameOver,
 });
@@ -441,6 +487,19 @@ const isSerializedState = (value: unknown): value is SerializedEngineState => {
 			isInteger(value.maxCombo) &&
 			value.maxCombo >= -1 &&
 			typeof value.backToBack === 'boolean' &&
+			isNonNegativeInteger(value.currentTick) &&
+			Array.isArray(value.incomingGarbage) &&
+			value.incomingGarbage.every(
+				(packet) =>
+					isRecord(packet) &&
+					isInteger(packet.lines) &&
+					packet.lines > 0 &&
+					isInteger(packet.hole) &&
+					packet.hole >= 0 &&
+					packet.hole < BOARD_WIDTH &&
+					packet.lines <= BOARD_INTERNAL_HEIGHT &&
+					isNonNegativeInteger(packet.readyTick),
+			) &&
 			(!('lastPlacement' in value) || isPlacementScore(value.lastPlacement)) &&
 			typeof value.gameOver === 'boolean'
 	);
@@ -460,6 +519,7 @@ export const deserializeEngineState = (serialized: string): GameEngineState => {
 		board: { cells: [...board] },
 		activePiece: { ...activePiece } as ActivePiece,
 		bag: { ...bag, random: { ...bag.random }, remaining: [...bag.remaining] },
+		incomingGarbage: parsed.incomingGarbage.map((packet) => ({ ...packet })),
 	};
 };
 
