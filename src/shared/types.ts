@@ -99,7 +99,9 @@ export interface PlayerSnapshot {
 	lines?: number;
 	level?: number;
 	combo?: number;
+	maxCombo?: number;
 	backToBack?: boolean;
+	attackSent?: number;
 	incomingGarbage?: number;
 	lastProcessedInput?: number;
 }

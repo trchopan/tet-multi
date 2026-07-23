@@ -4,6 +4,7 @@ import { Room } from './room';
 import { RoomManager } from './room-manager';
 import type { SocketLike } from './session';
 import { validateServerMessage } from '../shared/protocol';
+import type { GameEngineState } from '../game/engine';
 
 class FakeSocket implements SocketLike {
 	messages: string[] = [];
@@ -246,6 +247,52 @@ describe('room lifecycle', () => {
 			);
 		expect(snapshots).toHaveLength(1);
 		expect(validateServerMessage(snapshots[0])).toBe(true);
+	});
+
+	test('includes match statistics in player snapshots', () => {
+		let now = 0;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			createId: ids,
+			createSeed: () => 'stats-seed',
+			createToken: ids,
+		});
+		const first = room.join('a', 'Alice', new FakeSocket(), 0).session!;
+		const second = room.join('b', 'Bob', new FakeSocket(), 0).session!;
+		room.setReady(first.playerId, true);
+		room.setReady(second.playerId, true);
+		room.start(first.playerId, now);
+		now = 3000;
+		room.update(now);
+
+		const engine = (
+			room as unknown as { engines: Map<string, GameEngineState> }
+		).engines.get(first.playerId);
+		expect(engine).toBeDefined();
+		if (engine === undefined) return;
+		for (let y = 20; y < 24; y += 1) {
+			for (let x = 0; x < 10; x += 1) {
+				if (x !== 5) engine.board.cells[y * 10 + x] = 1;
+			}
+		}
+		engine.activePiece = { kind: 'I', x: 3, y: 20, rotation: 1 };
+		room.acceptInput(
+			first.playerId,
+			{
+				type: 'input',
+				matchId: room.snapshot(now).matchId!,
+				sequence: 1,
+				action: 'hard_drop',
+			},
+			now,
+		);
+		room.update(3017);
+		const player = room
+			.snapshot(now)
+			.players.find((candidate) => candidate.playerId === first.playerId)!;
+		expect(player.maxCombo).toBe(0);
+		expect(player.attackSent).toBe(14);
 	});
 
 	test('explicit leave eliminates a player during an active match', () => {

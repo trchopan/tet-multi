@@ -81,6 +81,7 @@ export class Room {
 		string,
 		{ last: number; tokens: number }
 	>();
+	private readonly attackSent = new Map<string, number>();
 	private pendingAttacks: AttackPacket[] = [];
 	private emptySince?: number;
 	private lastLobbyHeartbeatAt: number;
@@ -202,6 +203,7 @@ export class Room {
 		this.lastProcessedInput.clear();
 		this.lastAcceptedInput.clear();
 		this.inputWindows.clear();
+		this.attackSent.clear();
 		this.pendingAttacks = [];
 		for (const session of this.sessions.values()) {
 			session.ready = false;
@@ -266,6 +268,7 @@ export class Room {
 				this.inputQueues.set(session.playerId, []);
 				this.lastProcessedInput.set(session.playerId, 0);
 				this.lastAcceptedInput.set(session.playerId, 0);
+				this.attackSent.set(session.playerId, 0);
 			}
 			this.broadcast({
 				type: 'match_started',
@@ -422,8 +425,13 @@ export class Room {
 	private processPlacement(playerId: string, engine: GameEngineState): void {
 		const placement = takeLastPlacement(engine);
 		if (placement === undefined || this.match === undefined) return;
-		const outgoing = cancelIncomingGarbage(engine, placement.attack);
+		const cancelled = cancelIncomingGarbage(engine, placement.attack);
+		const outgoing = placement.attack - cancelled;
 		if (outgoing > 0) {
+			this.attackSent.set(
+				playerId,
+				(this.attackSent.get(playerId) ?? 0) + outgoing,
+			);
 			const packet = createAttackPacket(
 				this.match,
 				playerId,
@@ -478,7 +486,9 @@ export class Room {
 			snapshot.lines = engine.lines;
 			snapshot.level = engine.level;
 			snapshot.combo = engine.combo;
+			snapshot.maxCombo = Math.max(0, engine.maxCombo);
 			snapshot.backToBack = engine.backToBack;
+			snapshot.attackSent = this.attackSent.get(session.playerId) ?? 0;
 			snapshot.incomingGarbage = engine.incomingGarbage.reduce(
 				(sum, packet) => sum + packet.lines,
 				0,

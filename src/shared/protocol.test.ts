@@ -47,6 +47,8 @@ const validSnapshot = {
 			ready: false,
 			isHost: true,
 			matchState: 'waiting',
+			maxCombo: 0,
+			attackSent: 0,
 		},
 	],
 } satisfies RoomSnapshot;

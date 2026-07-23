@@ -141,7 +141,9 @@ const playerSnapshot = strictObject({
 	lines: optional(nonNegativeInteger),
 	level: optional(nonNegativeInteger),
 	combo: optional(pipe(number(), integer())),
+	maxCombo: optional(pipe(number(), integer())),
 	backToBack: optional(boolean()),
+	attackSent: optional(nonNegativeInteger),
 	incomingGarbage: optional(nonNegativeInteger),
 	lastProcessedInput: optional(nonNegativeInteger),
 });
