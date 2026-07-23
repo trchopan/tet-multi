@@ -52,7 +52,13 @@ reserves `/ws` for the later native WebSocket implementation.
 - The health response is implemented in both the development SvelteKit route
   and the production Bun handler so `/health` works in either mode. The Bun
   handler is authoritative in production.
-- WebSocket, protocol, game engine, and gameplay UI behavior are intentionally
+- Protocol contracts use Valibot schemas shared by the Bun server and browser
+  client. Protocol version `1`, the 16 KiB inbound message limit, and the error
+  code union are stable wire-contract values.
+- Room codes are normalized to uppercase and display names are trimmed at the
+  protocol boundary. Protocol timestamps use Unix epoch milliseconds, while
+  simulation ticks remain separate authoritative integer counters.
+- WebSocket room handling, game engine, and gameplay UI behavior remain
   deferred to their dependent tickets.
 
 ## Current Limitations
