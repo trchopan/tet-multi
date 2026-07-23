@@ -28,6 +28,18 @@ Run the browser suite independently with:
 bun run test:e2e
 ```
 
+Capture the multiplayer layout at mobile and desktop sizes for 2–6 players:
+
+```bash
+bun run screenshots
+```
+
+Images are written to `local/screenshots` using the `players-{count}-{viewport}.png`
+name pattern. The same directory receives `overflow-report.json`, which records
+document dimensions, horizontal and vertical overflow, local-canvas visibility,
+and elements extending beyond either viewport edge.
+Screenshot runs start a fresh test server rather than reusing an existing process.
+
 The first run may require `bunx playwright install chromium`.
 
 Build and run the production artifact:
