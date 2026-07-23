@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: your-app-directory
+    container_name: neon-drop
     restart: unless-stopped
     ports:
       - "8780:3000"
