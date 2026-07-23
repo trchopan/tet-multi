@@ -12,6 +12,8 @@ export const DISPLAY_NAME_MAX_LENGTH = 20;
 export const NEXT_PREVIEW_COUNT = 5;
 
 export const BOARD_WIDTH = 10;
+export const BOARD_HIDDEN_HEIGHT = 4;
+export const BOARD_VISIBLE_HEIGHT = 20;
 export const BOARD_INTERNAL_HEIGHT = 24;
 export const BOARD_CELL_COUNT = BOARD_WIDTH * BOARD_INTERNAL_HEIGHT;
 

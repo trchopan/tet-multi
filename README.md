@@ -58,13 +58,21 @@ reserves `/ws` for the later native WebSocket implementation.
 - Room codes are normalized to uppercase and display names are trimmed at the
   protocol boundary. Protocol timestamps use Unix epoch milliseconds, while
   simulation ticks remain separate authoritative integer counters.
-- WebSocket room handling, game engine, and gameplay UI behavior remain
+- The game engine uses a 32-bit explicit-state PRNG. Each seven-bag stream is
+  derived from the match seed and stable roster index, so player iteration and
+  socket order cannot affect piece generation.
+- Engine coordinates use the internal 10 x 24 board directly: rows 0-3 are
+  hidden spawn rows and rows 4-23 are visible. Board serialization is a copied
+  row-major number array, and engine hashes use canonical JSON with FNV-1a.
+- SRS rotation, timed locking, scoring, garbage, and gameplay UI remain
   deferred to their dependent tickets.
 
 ## Current Limitations
 
-The current phase does not yet include rooms, WebSockets, gameplay, keyboard
-controls, or Canvas rendering.
+The current phase does not yet include rooms, WebSockets, timed gameplay,
+keyboard controls, or Canvas rendering. The deterministic engine foundation
+supports piece streams, spawning, collision, placement, and horizontal
+movement; full rules are deferred to the next engine ticket.
 
 Browser-based E2E tests are deferred to ticket 012; `bun run test:e2e` exits
 successfully with that status until those tests are introduced.
