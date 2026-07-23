@@ -6,6 +6,8 @@ engine run in one deployable process. The client supports room creation, lobby
 flow, authoritative multiplayer snapshots, reconnection, prediction, and match
 results.
 
+Play the live demo at [tet.chop.dev](https://tet.chop.dev).
+
 ## Setup
 
 Requirements:
@@ -85,23 +87,17 @@ docker build -t neon-drop .
 docker run --rm -p 3000:3000 -e ALLOWED_ORIGINS=http://localhost:3000 neon-drop
 ```
 
-### Deployment on `your-server`
+### Docker Compose Deployment
 
-The deployment uses Docker Compose and publishes the Bun process on host port
-`8780`, which is already exposed through Cloudflare at `https://tet.chop.dev`.
-The production origin and WebSocket origin check are configured in
-`docker-compose.yml`.
+The included Compose file runs the app on port `3000`. Set
+`PUBLIC_BASE_URL` and `ALLOWED_ORIGINS` to the public HTTPS origin used by your
+deployment. The repository's live demo is [tet.chop.dev](https://tet.chop.dev).
 
 ```bash
-rsync -az --delete --exclude .git --exclude node_modules --exclude build \
-  --exclude .svelte-kit --exclude test-results --exclude .ticket-runs \
-  ./ deploy-user@your-server.example.com:~/your-app-directory/
-ssh deploy-user@your-server.example.com \
-  'cd ~/your-app-directory && docker compose up -d --build'
+PUBLIC_BASE_URL=https://your-domain.example \
+ALLOWED_ORIGINS=https://your-domain.example \
+docker compose up -d --build
 ```
-
-Verify the deployment with `curl https://tet.chop.dev/health` and
-`docker compose -f ~/your-app-directory/docker-compose.yml ps` on the host.
 
 ## Implementation Decisions
 
