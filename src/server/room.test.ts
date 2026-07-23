@@ -69,6 +69,9 @@ describe('room lifecycle', () => {
 		now = 3000;
 		room.update(now);
 		expect(room.currentPhase).toBe('playing');
+		expect(() => room.returnToLobby(second.playerId)).toThrow('NOT_HOST');
+		room.returnToLobby(first.playerId);
+		expect(room.currentPhase).toBe('lobby');
 	});
 
 	test('migrates host on explicit leave and broadcasts expiry removals', () => {
