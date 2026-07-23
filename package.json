@@ -14,6 +14,7 @@
 		"test": "bun test src/server src/game src/shared src/lib",
 		"test:watch": "bun test --watch src/server src/game src/shared src/lib",
 		"test:e2e": "bun run scripts/test-e2e.ts",
+		"screenshots": "PLAYWRIGHT_SCREENSHOTS=true bunx playwright test playwright/layout-screenshots.pw.ts --workers=1",
 		"test:performance": "bun run scripts/performance.ts",
 		"verify:production": "bun run scripts/verify-production.ts",
 		"verify": "bun run lint && bun run typecheck && bun run check && bun test && bun run build && bun run test:e2e && bun run test:performance && bun run verify:production"

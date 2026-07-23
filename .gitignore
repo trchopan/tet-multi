@@ -5,3 +5,4 @@ node_modules/
 build/
 .ticket-runs/
 test-results/
+local/
