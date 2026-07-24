@@ -6,11 +6,13 @@ const outputDirectory = join(process.cwd(), 'local', 'screenshots');
 
 const viewports = [
 	{ name: 'desktop', width: 1440, height: 1000 },
+	{ name: 'desktop-short', width: 1440, height: 700 },
 	{ name: 'mobile', width: 390, height: 844 },
+	{ name: 'mobile-short', width: 390, height: 667 },
 ] as const;
 
-const playerNames = ['Alice', 'Bob', 'Casey', 'Drew', 'Emery', 'Frank'];
-const playerCounts = [2, 3, 4, 5, 6] as const;
+const playerNames = ['Alice', 'Bob', 'Casey', 'Drew', 'Emery'];
+const playerCounts = [2, 3, 4, 5] as const;
 type ViewportName = (typeof viewports)[number]['name'];
 
 interface PageLayoutReport {
@@ -23,6 +25,11 @@ interface PageLayoutReport {
 	verticalOverflow: boolean;
 	localCanvasFullyVisible: boolean;
 	localCanvasRequiresVerticalScroll: boolean;
+	localCanvasWidth: number;
+	localCanvasHeight: number;
+	localCanvasBottom: number;
+	nextPanelTop: number;
+	statsTop: number;
 	overflowingElements: string[];
 }
 
@@ -113,7 +120,7 @@ for (const viewport of viewports) {
 
 				for (const page of pages) {
 					await expect(
-						page.getByText(`${playerCount} / 6 players`),
+						page.getByText(`${playerCount} / 5 players`),
 					).toBeVisible();
 					await page.getByRole('button', { name: 'Ready up' }).click();
 				}
@@ -124,10 +131,20 @@ for (const viewport of viewports) {
 				await hostPage.getByRole('button', { name: 'Start match' }).click();
 
 				for (const [localPlayerIndex, page] of pages.entries()) {
-					await expect(page.getByText('Battle in progress')).toBeVisible({
+					await expect(page.locator('[data-match-id]')).toBeVisible({
 						timeout: 10_000,
 					});
 					await expect(page.locator('canvas')).toHaveCount(playerCount);
+					if (viewport.name === 'mobile') {
+						await expect(page.locator('#opponent-boards')).toBeHidden();
+						await page.getByRole('button', { name: 'Show opponents' }).click();
+						await expect(page.locator('#opponent-boards')).toBeVisible();
+						await expect(page.locator('#opponent-boards canvas')).toHaveCount(
+							playerCount - 1,
+						);
+						await page.getByRole('button', { name: 'Hide opponents' }).click();
+						await expect(page.locator('#opponent-boards')).toBeHidden();
+					}
 
 					const layout = await page.evaluate(() => {
 						const root = document.scrollingElement;
@@ -161,11 +178,25 @@ for (const viewport of viewports) {
 							localCanvasRequiresVerticalScroll:
 								localRect !== undefined &&
 								(localRect.top < 0 || localRect.bottom > window.innerHeight),
+							localCanvasWidth: localRect?.width ?? 0,
+							localCanvasHeight: localRect?.height ?? 0,
+							localCanvasBottom: localRect?.bottom ?? 0,
+							nextPanelTop:
+								document.querySelector('.next-panel')?.getBoundingClientRect()
+									.top ?? 0,
+							statsTop:
+								document
+									.querySelector('.card.local .stats')
+									?.getBoundingClientRect().top ?? 0,
 							overflowingElements,
 						};
 					});
 
 					report.pages.push({ localPlayerIndex, ...layout });
+					expect(
+						layout.verticalOverflow,
+						`${playerCount} players at ${viewport.name}, document exceeds the viewport`,
+					).toBe(false);
 					expect(
 						layout.horizontalOverflow,
 						`${playerCount} players at ${viewport.name}, local player ${localPlayerIndex + 1} has horizontal overflow: ${layout.overflowingElements.join(', ')}`,
@@ -175,6 +206,24 @@ for (const viewport of viewports) {
 							layout.localCanvasFullyVisible,
 							`${playerCount} players at mobile, local player ${localPlayerIndex + 1} has a canvas outside the initial viewport`,
 						).toBe(true);
+					if (viewport.name.startsWith('mobile')) {
+						expect(
+							layout.localCanvasWidth,
+							`${playerCount} players at ${viewport.name}, local board is too narrow`,
+						).toBeGreaterThanOrEqual(120);
+						expect(
+							layout.localCanvasHeight,
+							`${playerCount} players at ${viewport.name}, local board is too short`,
+						).toBeGreaterThanOrEqual(240);
+						expect(
+							layout.nextPanelTop,
+							`${playerCount} players at ${viewport.name}, next queue overlaps local board`,
+						).toBeGreaterThanOrEqual(layout.localCanvasBottom - 1);
+						expect(
+							layout.statsTop,
+							`${playerCount} players at ${viewport.name}, stats overlap local board`,
+						).toBeGreaterThanOrEqual(layout.localCanvasBottom - 1);
+					}
 				}
 
 				await hostPage.screenshot({

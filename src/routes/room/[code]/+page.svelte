@@ -45,6 +45,11 @@
 			: session.snapshot.countdownEndsAt - (now + offset),
 	);
 	const countdownText = $derived(countdownLabel(countdownRemaining));
+	const activeMatch = $derived(
+		joined &&
+			(session.snapshot?.phase === 'countdown' ||
+				session.snapshot?.phase === 'playing'),
+	);
 
 	const input = (action: InputAction): void => session.sendInput(action);
 </script>
@@ -54,7 +59,7 @@
 	<meta name="description" content={`tet-multi room ${code}`} />
 </svelte:head>
 
-<main>
+<main class:match-page={activeMatch}>
 	{#if !joined}
 		<HomeForm
 			onCreate={connect}
@@ -102,21 +107,16 @@
 			<header class="match-header">
 				<div>
 					<p class="eyebrow">Room {code}</p>
-					<h1>
-						{session.snapshot.phase === 'countdown'
-							? 'Get ready'
-							: 'Battle in progress'}
-					</h1>
 				</div>
-				<span
-					class="connection"
-					role="status"
-					aria-live="polite"
-					aria-atomic="true"
-					>{session.connectionState === 'connected'
-						? 'Connected'
-						: 'Connection lost'}</span
-				>
+				<div class="network-state" role="status" aria-live="polite">
+					<i
+						aria-hidden="true"
+						class:offline={session.connectionState !== 'connected'}
+					></i>
+					{session.connectionState === 'connected'
+						? 'Online'
+						: 'Connection issue'}
+				</div>
 			</header>
 			{#if session.snapshot.phase === 'countdown'}<div
 					class="countdown"
@@ -150,6 +150,15 @@
 		padding: clamp(1rem, 3vw, 2.5rem);
 		background: radial-gradient(circle at 50% 0%, #292341, #10121c 60%);
 	}
+	main.match-page {
+		height: 100dvh;
+		min-height: 0;
+		padding: max(0.5rem, env(safe-area-inset-top))
+			max(0.5rem, env(safe-area-inset-right))
+			max(0.5rem, env(safe-area-inset-bottom))
+			max(0.5rem, env(safe-area-inset-left));
+		overflow: hidden;
+	}
 	.connecting {
 		width: min(100%, 34rem);
 		margin: 15vh auto;
@@ -159,29 +168,48 @@
 		background: rgba(20, 18, 38, 0.9);
 		text-align: center;
 	}
+	.play-shell {
+		height: 100%;
+		display: grid;
+		grid-template-rows: auto minmax(0, 1fr);
+		min-height: 0;
+		width: min(100%, 110rem);
+		margin: auto;
+	}
 	.match-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		gap: 1rem;
 		width: min(100%, 110rem);
-		margin: 0 auto 1.5rem;
+		margin: 0 auto 0.25rem;
 	}
-	.eyebrow,
-	.connection {
+	.network-state {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		color: #aaa5c0;
+		font-size: 0.72rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	.network-state i {
+		width: 0.45rem;
+		height: 0.45rem;
+		border-radius: 50%;
+		background: #58e38c;
+	}
+	.network-state i.offline {
+		background: #ff9f43;
+	}
+	.eyebrow {
+		margin: 0;
 		color: #ffe66d;
 		font-size: 0.78rem;
 		font-weight: 800;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-	}
-	h1 {
-		margin: 0.3rem 0;
-		font-size: clamp(2rem, 6vw, 4rem);
-		letter-spacing: -0.06em;
-	}
-	.connection {
-		color: #58e38c;
 	}
 	.countdown {
 		position: fixed;
@@ -196,6 +224,7 @@
 		pointer-events: none;
 	}
 	.error {
+		margin: 0.25rem 0 0;
 		color: #ff9f9f;
 	}
 	button {

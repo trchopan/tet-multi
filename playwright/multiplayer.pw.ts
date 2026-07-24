@@ -37,12 +37,12 @@ test('two browser contexts complete a synchronized match and return to lobby', a
 			hostPage.getByRole('button', { name: 'Start match' }),
 		).toBeEnabled();
 		await hostPage.getByRole('button', { name: 'Start match' }).click();
-		await expect(hostPage.getByText('Get ready')).toBeVisible();
-		await expect(guestPage.getByText('Get ready')).toBeVisible();
-		await expect(hostPage.getByText('Battle in progress')).toBeVisible({
+		await expect(hostPage.locator('.countdown')).toBeVisible();
+		await expect(guestPage.locator('.countdown')).toBeVisible();
+		await expect(hostPage.locator('[data-match-id]')).toBeVisible({
 			timeout: 8_000,
 		});
-		await expect(guestPage.getByText('Battle in progress')).toBeVisible({
+		await expect(guestPage.locator('[data-match-id]')).toBeVisible({
 			timeout: 8_000,
 		});
 		const hostMatchId = await hostPage
@@ -67,11 +67,11 @@ test('two browser contexts complete a synchronized match and return to lobby', a
 		await guestPage.close();
 		const reconnectedGuestPage = await guest.newPage();
 		await reconnectedGuestPage.goto(`/room/${code}`);
-		await expect(
-			reconnectedGuestPage.getByText('Battle in progress'),
-		).toBeVisible({ timeout: 10_000 });
+		await expect(reconnectedGuestPage.locator('[data-match-id]')).toBeVisible({
+			timeout: 10_000,
+		});
 		await expect(reconnectedGuestPage.getByRole('status').first()).toHaveText(
-			'Connected',
+			'Online',
 		);
 
 		const topOut = await hostPage.request.post('/__test__/top-out', {

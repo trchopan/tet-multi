@@ -8,6 +8,7 @@ import { canPlacePiece, pieceCells, type BoardCell } from '../../game/board';
 import type { ActivePiece, GameEngineState } from '../../game/engine';
 import { pieceValue } from '../../game/pieces';
 import type { PlayerSnapshot } from '../../shared/types';
+import { PIECE_COLORS } from './theme';
 
 export interface CanvasMetrics {
 	cssWidth: number;
@@ -30,18 +31,6 @@ export interface SnapshotBoardState {
 	activePiece?: ActivePiece;
 	gameOver: boolean;
 }
-
-export const PIECE_COLORS: readonly string[] = [
-	'#10121c',
-	'#35d9ff',
-	'#5271ff',
-	'#ff9f43',
-	'#ffe66d',
-	'#58e38c',
-	'#c77dff',
-	'#ff5c8a',
-	'#8d96a8',
-];
 
 export const getCanvasMetrics = (
 	cssWidth: number,
