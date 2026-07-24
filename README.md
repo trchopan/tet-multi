@@ -86,12 +86,11 @@ Run the deterministic synthetic load check with:
 bun run test:performance
 ```
 
-It advances 50 five-player rooms for 600 fixed ticks in one Bun process. The
-check fails if average global tick work reaches 8 ms or a five-player snapshot
-reaches 20 KiB. It also reports aggregate outbound traffic for all five clients;
-the current measurement is approximately 642 KiB/s per room, above the SPEC's
-approximate 400 KiB/s target, because each full snapshot is sent to five clients.
-Results are machine-dependent and printed as JSON.
+It advances 50 five-player rooms for 600 fixed ticks in one Bun process, using
+one human and four computer players per room to exercise the bot workload. The
+check warns if average global tick work reaches 8 ms or aggregate traffic
+exceeds the SPEC's approximate 400 KiB/s target, and fails if a five-player
+snapshot reaches 20 KiB. Results are machine-dependent and printed as JSON.
 
 An optional non-root container is available:
 
@@ -176,6 +175,11 @@ docker compose up -d --build
   scoring, garbage, and match outcomes remain server-owned. Opponent pieces
   interpolate between recent snapshots and snap for discrete events. Ping/pong
   samples provide informational latency and lowest-RTT clock-offset estimates.
+- Computer players are server-owned lobby participants. The host can add up to
+  four computers, counted within the five-player room capacity, and remove them
+  before starting a match. Their deterministic rule-based controller evaluates
+  legal placements on cloned engine states, selects among the strongest few,
+  and submits delayed actions through the same authoritative room input queue.
 - Active matches use a viewport-sized `100dvh` shell. The local board scales from
   available height, while mobile keeps opponent boards behind the existing toggle
   so the playable board and controls remain visible without page scrolling.

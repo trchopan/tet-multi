@@ -109,6 +109,70 @@ describe('room lifecycle', () => {
 		expect(created.room.playerCount).toBe(5);
 	});
 
+	test('host can add up to four ready computer players', () => {
+		const room = new Room({
+			code: 'ABC234',
+			createId: ids,
+			createToken: ids,
+		});
+		const host = room.join('human', 'Alice', new FakeSocket(), 0).session!;
+		const computers = Array.from({ length: 4 }, () =>
+			room.addComputer(host.playerId),
+		);
+		expect(
+			computers.every((computer) => computer.playerType === 'computer'),
+		).toBe(true);
+		expect(computers.every((computer) => computer.ready)).toBe(true);
+		expect(room.computerCount).toBe(4);
+		expect(() => room.addComputer(host.playerId)).toThrow('ROOM_FULL');
+	});
+
+	test('only the host can add or remove computer players', () => {
+		const room = new Room({
+			code: 'ABC234',
+			createId: ids,
+			createToken: ids,
+		});
+		const host = room.join('host', 'Alice', new FakeSocket(), 0).session!;
+		const other = room.join('other', 'Bob', new FakeSocket(), 0).session!;
+		expect(() => room.addComputer(other.playerId)).toThrow('NOT_HOST');
+		const computer = room.addComputer(host.playerId);
+		expect(() =>
+			room.removeComputer(other.playerId, computer.playerId),
+		).toThrow('NOT_HOST');
+	});
+
+	test('computer players do not become host after human host leaves', () => {
+		const room = new Room({ code: 'ABC234', createId: ids, createToken: ids });
+		const host = room.join('human', 'Alice', new FakeSocket(), 0).session!;
+		room.addComputer(host.playerId);
+		room.leave(host.playerId);
+		expect(room.playerCount).toBe(0);
+		expect(room.snapshot().hostPlayerId).toBe('');
+	});
+
+	test('computer actions advance through the authoritative room update', () => {
+		let now = 0;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			createId: ids,
+			createSeed: () => 'bot-match-seed',
+			createToken: ids,
+		});
+		const host = room.join('human', 'Alice', new FakeSocket(), 0).session!;
+		const computer = room.addComputer(host.playerId, 0);
+		room.setReady(host.playerId, true);
+		room.start(host.playerId, now);
+		now = 3000;
+		room.update(now);
+		for (let tick = 0; tick < 30; tick += 1) room.update((now += 17));
+		const player = room
+			.snapshot()
+			.players.find((candidate) => candidate.playerId === computer.playerId);
+		expect(player?.lastProcessedInput).toBeGreaterThan(0);
+	});
+
 	test('requires readiness and host authorization before countdown', () => {
 		let now = 0;
 		const room = new Room({
@@ -404,5 +468,33 @@ describe('room lifecycle', () => {
 		expect(
 			snapshot.players.filter((player) => player.placement === 2),
 		).toHaveLength(2);
+	});
+
+	test('migrates the host when active-match grace expires', () => {
+		let now = 0;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			reconnectGraceMs: 20,
+			createId: ids,
+			createSeed: () => 'host-expiry-seed',
+			createToken: ids,
+		});
+		const hostSocket = new FakeSocket();
+		const nextSocket = new FakeSocket();
+		const host = room.join('host', 'Alice', hostSocket, 0).session!;
+		const next = room.join('next', 'Bob', nextSocket, 0).session!;
+		room.setReady(host.playerId, true);
+		room.setReady(next.playerId, true);
+		room.start(host.playerId, now);
+		now = 3000;
+		room.update(now);
+		room.disconnect(host.playerId, 10, hostSocket);
+		now = 30;
+		room.update(now);
+
+		expect(room.snapshot().hostPlayerId).toBe(next.playerId);
+		expect(() => room.returnToLobby(next.playerId)).not.toThrow();
+		expect(room.currentPhase).toBe('lobby');
 	});
 });

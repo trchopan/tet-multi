@@ -259,6 +259,12 @@ const dispatch = (
 		case 'start_match':
 			room.start(session.playerId);
 			break;
+		case 'add_computer':
+			room.addComputer(session.playerId);
+			break;
+		case 'remove_computer':
+			room.removeComputer(session.playerId, message.playerId);
+			break;
 		case 'return_to_lobby':
 			room.returnToLobby(session.playerId);
 			break;

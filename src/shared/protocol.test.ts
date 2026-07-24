@@ -24,6 +24,8 @@ const validClientMessages = [
 	},
 	{ type: 'set_ready', ready: true },
 	{ type: 'start_match' },
+	{ type: 'add_computer' },
+	{ type: 'remove_computer', playerId: 'computer-1' },
 	{ type: 'input', matchId: 'match-1', sequence: 1, action: 'move_left' },
 	{ type: 'return_to_lobby' },
 	{ type: 'leave_room' },
@@ -42,6 +44,7 @@ const validSnapshot = {
 			playerId: 'player-1',
 			displayName: 'Alice',
 			shortId: 'p1',
+			playerType: 'human',
 			joinedAt: 1_700_000_000_000,
 			connected: true,
 			ready: false,
@@ -95,6 +98,18 @@ describe('shared protocol', () => {
 		expect(
 			decodeClientMessage('x'.repeat(MAX_INBOUND_MESSAGE_BYTES * 4 + 1)),
 		).toMatchObject({ success: false, code: 'INVALID_MESSAGE' });
+	});
+
+	test('requires player type in every snapshot player', () => {
+		const player = validSnapshot.players[0];
+		if (player === undefined) throw new Error('Snapshot fixture is empty');
+		const { playerType: _playerType, ...legacyPlayer } = player;
+		expect(
+			safeParse(RoomSnapshotSchema, {
+				...validSnapshot,
+				players: [legacyPlayer],
+			}).success,
+		).toBe(false);
 	});
 
 	test('distinguishes an incompatible hello protocol version', () => {

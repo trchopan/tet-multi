@@ -1,10 +1,14 @@
 import { performance } from 'node:perf_hooks';
 import { Room } from '../src/server/room';
-import { MAX_PLAYERS_PER_ROOM } from '../src/shared/constants';
+import {
+	MAX_COMPUTER_PLAYERS_PER_ROOM,
+	MAX_PLAYERS_PER_ROOM,
+} from '../src/shared/constants';
 import type { SocketLike } from '../src/server/session';
 
 const ROOM_COUNT = 50;
 const PLAYERS_PER_ROOM = MAX_PLAYERS_PER_ROOM;
+const HUMAN_PLAYERS_PER_ROOM = PLAYERS_PER_ROOM - MAX_COMPUTER_PLAYERS_PER_ROOM;
 const TICKS = 600;
 
 class BenchmarkSocket implements SocketLike {
@@ -25,11 +29,23 @@ for (let roomIndex = 0; roomIndex < ROOM_COUNT; roomIndex += 1) {
 		createToken: () => `token-${roomIndex}-${id}`,
 	});
 	const sockets: BenchmarkSocket[] = [];
-	for (let playerIndex = 0; playerIndex < PLAYERS_PER_ROOM; playerIndex += 1) {
+	for (
+		let playerIndex = 0;
+		playerIndex < HUMAN_PLAYERS_PER_ROOM;
+		playerIndex += 1
+	) {
 		const socket = new BenchmarkSocket();
 		sockets.push(socket);
 		room.join(`client-${playerIndex}`, `Player ${playerIndex}`, socket, 0);
 	}
+	const host = room.players[0];
+	if (host === undefined) throw new Error('Performance room has no host');
+	for (
+		let botIndex = 0;
+		botIndex < MAX_COMPUTER_PLAYERS_PER_ROOM;
+		botIndex += 1
+	)
+		room.addComputer(host.playerId, 0);
 	for (const player of room.players) room.setReady(player.playerId, true);
 	room.start(room.players[0]!.playerId, 0);
 	room.update(3000);
@@ -66,6 +82,8 @@ const trafficPerRoomPerSecond = totalSnapshotBytes / ROOM_COUNT / (TICKS / 60);
 const result = {
 	rooms: ROOM_COUNT,
 	playersPerRoom: PLAYERS_PER_ROOM,
+	humanPlayersPerRoom: HUMAN_PLAYERS_PER_ROOM,
+	computerPlayersPerRoom: MAX_COMPUTER_PLAYERS_PER_ROOM,
 	ticksPerRoom: TICKS,
 	elapsedMs: Number(elapsed.toFixed(2)),
 	averageGlobalTickMs: Number(averageGlobalTickMs.toFixed(4)),

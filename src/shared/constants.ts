@@ -2,6 +2,7 @@ export const PROTOCOL_VERSION = 1 as const;
 
 export const MAX_INBOUND_MESSAGE_BYTES = 16 * 1024;
 export const MAX_PLAYERS_PER_ROOM = 5;
+export const MAX_COMPUTER_PLAYERS_PER_ROOM = 4;
 export const MIN_PLAYERS_TO_START = 2;
 
 export const ROOM_CODE_LENGTH = 6;
@@ -67,4 +68,6 @@ export const ERROR_CODES = [
 	'INVALID_RECONNECT_TOKEN',
 	'RATE_LIMITED',
 	'INTERNAL_ERROR',
+	'COMPUTER_LIMIT',
+	'INVALID_PLAYER',
 ] as const;

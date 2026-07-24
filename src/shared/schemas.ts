@@ -107,6 +107,11 @@ export const ClientMessageSchema = union([
 		ready: boolean(),
 	}),
 	strictObject({ type: literal('start_match') }),
+	strictObject({ type: literal('add_computer') }),
+	strictObject({
+		type: literal('remove_computer'),
+		playerId: identifier,
+	}),
 	strictObject({
 		type: literal('input'),
 		matchId: identifier,
@@ -126,6 +131,7 @@ const playerSnapshot = strictObject({
 	playerId: identifier,
 	displayName,
 	shortId: identifier,
+	playerType: union([literal('human'), literal('computer')]),
 	joinedAt: unixMilliseconds,
 	connected: boolean(),
 	ready: boolean(),

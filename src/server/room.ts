@@ -1,5 +1,6 @@
 import {
 	MAX_PLAYERS_PER_ROOM,
+	MAX_COMPUTER_PLAYERS_PER_ROOM,
 	MAX_GAMEPLAY_INPUTS_PER_SECOND,
 	GAMEPLAY_INPUT_BURST,
 	MIN_PLAYERS_TO_START,
@@ -23,6 +24,7 @@ import {
 	type AttackPacket,
 	type MatchState,
 } from '../game/match';
+import { createBotController, nextBotAction, type BotController } from './bot';
 import { serializeBoard } from '../game/board';
 import type {
 	RoomSnapshot,
@@ -31,6 +33,7 @@ import type {
 } from '../shared/types';
 import {
 	createReconnectToken,
+	createComputerSession,
 	reconnectTokensEqual,
 	createSession,
 	type Session,
@@ -55,6 +58,11 @@ export type RoomActionResult =
 			code: 'ROOM_FULL' | 'MATCH_IN_PROGRESS' | 'INVALID_RECONNECT_TOKEN';
 	  };
 
+interface QueuedInput {
+	sequence: number;
+	action: ClientInputMessage['action'];
+}
+
 const MATCH_COUNTDOWN_MS = 3000;
 
 export class Room {
@@ -76,7 +84,8 @@ export class Room {
 	private winnerPlayerIds?: string[];
 	private match?: MatchState;
 	private readonly engines = new Map<string, GameEngineState>();
-	private readonly inputQueues = new Map<string, ClientInputMessage[]>();
+	private readonly inputQueues = new Map<string, QueuedInput[]>();
+	private readonly botControllers = new Map<string, BotController>();
 	private readonly lastProcessedInput = new Map<string, number>();
 	private readonly lastAcceptedInput = new Map<string, number>();
 	private readonly inputWindows = new Map<
@@ -103,6 +112,11 @@ export class Room {
 
 	get playerCount(): number {
 		return this.sessions.size;
+	}
+
+	get computerCount(): number {
+		return this.players.filter((session) => session.playerType === 'computer')
+			.length;
 	}
 
 	get currentPhase(): RoomSnapshot['phase'] {
@@ -167,6 +181,34 @@ export class Room {
 		return { session, result: { ok: true } };
 	}
 
+	addComputer(playerId: string, now = this.now()): Session {
+		this.requireHost(playerId);
+		if (this.phase !== 'lobby') throw new RoomError('INVALID_PHASE');
+		if (this.sessions.size >= MAX_PLAYERS_PER_ROOM)
+			throw new RoomError('ROOM_FULL');
+		if (this.computerCount >= MAX_COMPUTER_PLAYERS_PER_ROOM)
+			throw new RoomError('COMPUTER_LIMIT');
+		const computer = createComputerSession({
+			playerId: this.createId(),
+			displayName: `CPU ${this.computerCount + 1}`,
+			roomCode: this.code,
+			joinedAt: now,
+		});
+		this.sessions.set(computer.playerId, computer);
+		this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot(now) });
+		return computer;
+	}
+
+	removeComputer(playerId: string, computerId: string, now = this.now()): void {
+		this.requireHost(playerId);
+		if (this.phase !== 'lobby') throw new RoomError('INVALID_PHASE');
+		const computer = this.sessions.get(computerId);
+		if (computer === undefined || computer.playerType !== 'computer')
+			throw new RoomError('INVALID_PLAYER');
+		this.sessions.delete(computerId);
+		this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot(now) });
+	}
+
 	setReady(playerId: string, ready: boolean): void {
 		const session = this.requireSession(playerId);
 		if (this.phase !== 'lobby') throw new RoomError('INVALID_PHASE');
@@ -205,13 +247,14 @@ export class Room {
 		delete this.match;
 		this.engines.clear();
 		this.inputQueues.clear();
+		this.botControllers.clear();
 		this.lastProcessedInput.clear();
 		this.lastAcceptedInput.clear();
 		this.inputWindows.clear();
 		this.attackSent.clear();
 		this.pendingAttacks = [];
 		for (const session of this.sessions.values()) {
-			session.ready = false;
+			session.ready = session.playerType === 'computer';
 			session.matchState = 'waiting';
 		}
 		this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot(now) });
@@ -219,6 +262,8 @@ export class Room {
 
 	leave(playerId: string): void {
 		const session = this.requireSession(playerId);
+		if (session.playerType === 'computer')
+			throw new RoomError('INVALID_PLAYER');
 		if (this.phase === 'playing') {
 			const matchPlayer = this.match?.players.find(
 				(player) => player.playerId === playerId,
@@ -229,12 +274,14 @@ export class Room {
 		this.sessions.delete(playerId);
 		delete session.socket;
 		if (playerId === this.hostPlayerId) this.migrateHost();
+		this.removeComputersIfNoHumanPresence(this.now());
 		if (this.sessions.size === 0) this.emptySince = this.now();
 		this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot() });
 	}
 
 	disconnect(playerId: string, now = this.now(), socket?: SocketLike): void {
 		const session = this.requireSession(playerId);
+		if (session.playerType === 'computer') return;
 		if (socket !== undefined && session.socket !== socket) return;
 		session.connected = false;
 		const matchPlayer = this.match?.players.find(
@@ -274,6 +321,8 @@ export class Room {
 				this.lastProcessedInput.set(session.playerId, 0);
 				this.lastAcceptedInput.set(session.playerId, 0);
 				this.attackSent.set(session.playerId, 0);
+				if (session.playerType === 'computer')
+					this.botControllers.set(session.playerId, createBotController());
 			}
 			this.broadcast({
 				type: 'match_started',
@@ -302,6 +351,7 @@ export class Room {
 						(player) => player.playerId === session.playerId,
 					);
 					if (matchPlayer !== undefined) matchPlayer.connected = false;
+					if (session.playerId === this.hostPlayerId) this.migrateHost();
 					expiredMatchPlayers.push(session.playerId);
 					continue;
 				}
@@ -325,6 +375,7 @@ export class Room {
 			this.emptySince ??= now;
 			return now - this.emptySince >= this.emptyTtlMs;
 		}
+		this.removeComputersIfNoHumanPresence(now);
 		return false;
 	}
 
@@ -394,6 +445,25 @@ export class Room {
 		const ordered = this.players.filter(
 			(session) => session.matchState !== 'eliminated',
 		);
+		for (const session of ordered) {
+			if (session.playerType !== 'computer') continue;
+			const engine = this.engines.get(session.playerId);
+			const controller = this.botControllers.get(session.playerId);
+			const queue = this.inputQueues.get(session.playerId);
+			if (
+				engine === undefined ||
+				controller === undefined ||
+				queue === undefined
+			)
+				continue;
+			const action = nextBotAction(controller, engine);
+			if (action !== undefined) {
+				const sequence =
+					(this.lastAcceptedInput.get(session.playerId) ?? 0) + 1;
+				queue.push({ sequence, action });
+				this.lastAcceptedInput.set(session.playerId, sequence);
+			}
+		}
 		for (const session of ordered) {
 			const engine = this.engines.get(session.playerId);
 			const queue = this.inputQueues.get(session.playerId);
@@ -473,6 +543,7 @@ export class Room {
 			playerId: session.playerId,
 			displayName: session.displayName,
 			shortId: session.playerId.slice(0, 6),
+			playerType: session.playerType,
 			joinedAt: session.joinedAt,
 			connected: session.connected,
 			ready: session.ready,
@@ -533,10 +604,27 @@ export class Room {
 	}
 
 	private migrateHost(): void {
-		const next = this.players.find((session) => session.connected);
+		const next = this.players.find(
+			(session) => session.playerType === 'human' && session.connected,
+		);
 		this.hostPlayerId = next?.playerId ?? '';
 		if (next !== undefined)
 			this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot() });
+	}
+
+	private removeComputersIfNoHumanPresence(now: number): void {
+		const hasHumanPresence = this.players.some(
+			(session) =>
+				session.playerType === 'human' &&
+				(session.connected ||
+					(session.reconnectDeadline !== undefined &&
+						session.reconnectDeadline > now)),
+		);
+		if (hasHumanPresence) return;
+		for (const session of this.players) {
+			if (session.playerType === 'computer')
+				this.sessions.delete(session.playerId);
+		}
 	}
 
 	private broadcast(message: ServerMessage, replaceable = false): void {
@@ -551,10 +639,13 @@ export class RoomError extends Error {
 	readonly code:
 		| 'NOT_JOINED'
 		| 'NOT_HOST'
+		| 'ROOM_FULL'
 		| 'INVALID_PHASE'
 		| 'INSUFFICIENT_PLAYERS'
 		| 'NOT_READY'
-		| 'RATE_LIMITED';
+		| 'RATE_LIMITED'
+		| 'COMPUTER_LIMIT'
+		| 'INVALID_PLAYER';
 
 	constructor(code: RoomError['code']) {
 		super(code);

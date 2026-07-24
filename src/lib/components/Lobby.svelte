@@ -1,6 +1,9 @@
 <script lang="ts">
 	import type { RoomSnapshot } from '../../shared/types';
-	import { MAX_PLAYERS_PER_ROOM } from '../../shared/constants';
+	import {
+		MAX_COMPUTER_PLAYERS_PER_ROOM,
+		MAX_PLAYERS_PER_ROOM,
+	} from '../../shared/constants';
 	import { getLobbyStartState } from '../client/lobby';
 
 	let {
@@ -8,6 +11,8 @@
 		localPlayerId,
 		onReady,
 		onStart,
+		onAddComputer,
+		onRemoveComputer,
 		onLeave,
 		error = '',
 		connectionState = 'connected',
@@ -16,6 +21,8 @@
 		localPlayerId: string;
 		onReady: (ready: boolean) => void;
 		onStart: () => void;
+		onAddComputer: () => void;
+		onRemoveComputer: (playerId: string) => void;
 		onLeave: () => void;
 		error?: string;
 		connectionState?:
@@ -30,6 +37,11 @@
 	const startState = $derived(getLobbyStartState(snapshot.players));
 	const canStart = $derived(startState.canStart && snapshot.phase === 'lobby');
 	const startReason = $derived(startState.reason);
+	const canAddComputer = $derived(
+		snapshot.players.length < MAX_PLAYERS_PER_ROOM &&
+			snapshot.players.filter((player) => player.playerType === 'computer')
+				.length < MAX_COMPUTER_PLAYERS_PER_ROOM,
+	);
 
 	const copyInvite = async (): Promise<void> => {
 		const url = `${globalThis.location.origin}/room/${snapshot.roomCode}`;
@@ -88,14 +100,24 @@
 				<div>
 					<strong>{player.displayName}</strong>
 					<span
-						>{player.isHost ? 'Host' : 'Player'} · {player.connected
+						>{player.playerType === 'computer'
+							? 'Computer'
+							: player.isHost
+								? 'Host'
+								: 'Player'} · {player.connected
 							? 'Connected'
 							: 'Reconnecting'}</span
 					>
 				</div>
-				<span class:ready={player.ready} class="ready-label"
-					>{player.ready ? 'Ready' : 'Not ready'}</span
-				>
+				{#if player.playerType === 'computer' && local?.isHost}
+					<button
+						class="remove-computer"
+						type="button"
+						onclick={() => onRemoveComputer(player.playerId)}>Remove</button
+					>
+				{:else}<span class:ready={player.ready} class="ready-label"
+						>{player.ready ? 'Ready' : 'Not ready'}</span
+					>{/if}
 			</li>
 		{/each}
 	</ul>
@@ -106,6 +128,9 @@
 			</button>
 		{/if}
 		{#if local?.isHost}
+			<button type="button" disabled={!canAddComputer} onclick={onAddComputer}>
+				Add computer
+			</button>
 			<button type="button" disabled={!canStart} onclick={onStart}
 				>Start match</button
 			>

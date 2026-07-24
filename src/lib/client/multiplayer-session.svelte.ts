@@ -114,6 +114,14 @@ export class MultiplayerSession {
 		this.send({ type: 'start_match' });
 	}
 
+	public addComputer(): void {
+		this.send({ type: 'add_computer' });
+	}
+
+	public removeComputer(playerId: string): void {
+		this.send({ type: 'remove_computer', playerId });
+	}
+
 	public returnToLobby(): void {
 		this.send({ type: 'return_to_lobby' });
 	}

@@ -10,6 +10,7 @@ const player = (): PlayerSnapshot => ({
 	playerId: 'player-1',
 	displayName: 'Alice',
 	shortId: 'p1',
+	playerType: 'human',
 	joinedAt: 0,
 	connected: true,
 	ready: true,
