@@ -26,9 +26,11 @@
 		<div>
 			<strong>{player.displayName}</strong>
 			<span class="presence" class:offline={!player.connected}
-				><i aria-hidden="true"></i>{local ? 'You · ' : ''}{player.connected
-					? 'Online'
-					: 'Reconnecting'}</span
+				><i aria-hidden="true"></i>{local
+					? 'You · '
+					: player.playerType === 'computer'
+						? 'Computer · '
+						: ''}{player.connected ? 'Online' : 'Reconnecting'}</span
 			>
 		</div>
 		<span

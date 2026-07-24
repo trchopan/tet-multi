@@ -106,3 +106,22 @@ test('two browser contexts complete a synchronized match and return to lobby', a
 		await guest.close();
 	}
 });
+
+test('a host can start a match against four computer players', async ({
+	page,
+}) => {
+	await page.goto('/');
+	await page.getByLabel('Display name').fill('Alice');
+	await page.getByRole('button', { name: 'Create room' }).click();
+	await expect(page.getByText('Waiting room')).toBeVisible();
+
+	for (let index = 0; index < 4; index += 1)
+		await page.getByRole('button', { name: 'Add computer' }).click();
+	await expect(page.getByText('CPU 1')).toBeVisible();
+	await expect(page.getByText('CPU 4')).toBeVisible();
+	await page.getByRole('button', { name: 'Ready up' }).click();
+	await page.getByRole('button', { name: 'Start match' }).click();
+
+	await expect(page.locator('[data-match-id]')).toBeVisible({ timeout: 8_000 });
+	await expect(page.locator('canvas')).toHaveCount(5);
+});

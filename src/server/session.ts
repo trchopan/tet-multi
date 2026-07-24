@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from 'bun';
-import type { PlayerMatchState } from '../shared/types';
+import type { PlayerMatchState, PlayerType } from '../shared/types';
 
 export interface SocketLike {
 	readonly readyState?: number;
@@ -34,6 +34,7 @@ export const reconnectTokensEqual = (
 export interface Session {
 	playerId: string;
 	clientId: string;
+	playerType: PlayerType;
 	displayName: string;
 	roomCode: string;
 	reconnectToken: string;
@@ -55,7 +56,23 @@ export const createSession = (input: {
 	socket: SocketLike;
 }): Session => ({
 	...input,
+	playerType: 'human',
 	connected: true,
 	ready: false,
+	matchState: 'waiting',
+});
+
+export const createComputerSession = (input: {
+	playerId: string;
+	displayName: string;
+	roomCode: string;
+	joinedAt: number;
+}): Session => ({
+	...input,
+	clientId: `computer:${input.playerId}`,
+	reconnectToken: '',
+	playerType: 'computer',
+	connected: true,
+	ready: true,
 	matchState: 'waiting',
 });

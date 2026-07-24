@@ -11,6 +11,7 @@ export type InputAction = (typeof INPUT_ACTIONS)[number];
 export type RoomPhase = (typeof ROOM_PHASES)[number];
 export type PlayerMatchState = (typeof PLAYER_MATCH_STATES)[number];
 export type ErrorCode = (typeof ERROR_CODES)[number];
+export type PlayerType = 'human' | 'computer';
 
 export interface ClientHelloMessage {
 	type: 'hello';
@@ -41,6 +42,15 @@ export interface ClientStartMatchMessage {
 	type: 'start_match';
 }
 
+export interface ClientAddComputerMessage {
+	type: 'add_computer';
+}
+
+export interface ClientRemoveComputerMessage {
+	type: 'remove_computer';
+	playerId: string;
+}
+
 export interface ClientInputMessage {
 	type: 'input';
 	matchId: string;
@@ -68,6 +78,8 @@ export type ClientMessage =
 	| ClientJoinRoomMessage
 	| ClientSetReadyMessage
 	| ClientStartMatchMessage
+	| ClientAddComputerMessage
+	| ClientRemoveComputerMessage
 	| ClientInputMessage
 	| ClientReturnToLobbyMessage
 	| ClientLeaveRoomMessage
@@ -84,6 +96,7 @@ export interface PlayerSnapshot {
 	playerId: string;
 	displayName: string;
 	shortId: string;
+	playerType: PlayerType;
 	joinedAt: number;
 	connected: boolean;
 	ready: boolean;

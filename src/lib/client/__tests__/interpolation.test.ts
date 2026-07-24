@@ -10,6 +10,7 @@ const snapshot = (y: number, board = Array(240).fill(0)): PlayerSnapshot => ({
 	playerId: 'player-2',
 	displayName: 'Bob',
 	shortId: 'p2',
+	playerType: 'human',
 	joinedAt: 0,
 	connected: true,
 	ready: true,

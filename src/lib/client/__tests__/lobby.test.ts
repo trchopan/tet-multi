@@ -6,6 +6,7 @@ const player = (connected: boolean, ready: boolean): PlayerSnapshot => ({
 	playerId: `${connected}-${ready}`,
 	displayName: 'Player',
 	shortId: 'player',
+	playerType: 'human',
 	joinedAt: 0,
 	connected,
 	ready,

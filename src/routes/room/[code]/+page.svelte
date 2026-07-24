@@ -87,6 +87,8 @@
 			localPlayerId={session.playerId}
 			onReady={(ready) => session.setReady(ready)}
 			onStart={() => session.startMatch()}
+			onAddComputer={() => session.addComputer()}
+			onRemoveComputer={(playerId) => session.removeComputer(playerId)}
 			onLeave={() => session.leaveRoom()}
 			error={session.error}
 			connectionState={session.connectionState}

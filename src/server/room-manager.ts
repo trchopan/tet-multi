@@ -190,6 +190,9 @@ export const errorMessage = (
 		INVALID_PHASE: 'That action is not available right now.',
 		INVALID_RECONNECT_TOKEN: 'The reconnect token is invalid or expired.',
 		RATE_LIMITED: 'Too many requests.',
+		COMPUTER_LIMIT:
+			'This room already has the maximum number of computer players.',
+		INVALID_PLAYER: 'That player is not available for this action.',
 		INTERNAL_ERROR: 'The server could not complete that action.',
 	};
 	return {
