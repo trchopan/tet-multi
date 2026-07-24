@@ -173,6 +173,9 @@ docker compose up -d --build
   scoring, garbage, and match outcomes remain server-owned. Opponent pieces
   interpolate between recent snapshots and snap for discrete events. Ping/pong
   samples provide informational latency and lowest-RTT clock-offset estimates.
+- Active gameplay prioritizes the local board with a hold rail, visual next-piece
+  previews, compact live statistics, and a denser opponent rail. Connection state
+  is shown in the match header and keyboard help is collapsed until requested.
 
 ## Current Limitations
 
