@@ -9,7 +9,11 @@ const backend = Bun.spawn(['bun', 'run', 'src/server/index.ts'], {
 const frontend = Bun.spawn(
 	['bun', 'run', 'vite', 'dev', '--host', '0.0.0.0', '--port', frontendPort],
 	{
-		env: { ...process.env, SERVER_PORT: serverPort },
+		env: {
+			...process.env,
+			SERVER_PORT: serverPort,
+			VITE_SERVER_PORT: serverPort,
+		},
 		stderr: 'inherit',
 		stdout: 'inherit',
 	},

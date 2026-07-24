@@ -165,6 +165,9 @@ docker compose up -d --build
   the client cleanly rather than allowing unbounded memory growth.
 - The fixed scheduler reports excessive lag, and SIGINT/SIGTERM stop new joins,
   stop simulation, close active sockets, and stop the Bun server.
+- Development WebSocket connections use the Vite-provided server port to connect
+  directly to Bun instead of traversing Vite's WebSocket proxy. This avoids noisy
+  proxy pipe errors when a browser reloads or closes a room connection.
 - The multiplayer client keeps WebSocket/session state outside visual
   components, stores reconnect tokens by room code, retries transient
   disconnects with bounded exponential backoff, and uses authoritative

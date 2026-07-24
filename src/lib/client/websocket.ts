@@ -20,8 +20,13 @@ export interface WebSocketClientOptions {
 }
 
 const websocketUrl = (): string => {
-	const protocol = globalThis.location?.protocol === 'https:' ? 'wss:' : 'ws:';
-	return `${protocol}//${globalThis.location?.host ?? 'localhost:3000'}/ws`;
+	const location = globalThis.location;
+	const protocol = location?.protocol === 'https:' ? 'wss:' : 'ws:';
+	if (import.meta.env.DEV && location !== undefined) {
+		const serverPort = import.meta.env.VITE_SERVER_PORT ?? '3000';
+		return `${protocol}//${location.hostname}:${serverPort}/ws`;
+	}
+	return `${protocol}//${location?.host ?? 'localhost:3000'}/ws`;
 };
 
 export const reconnectDelay = (
