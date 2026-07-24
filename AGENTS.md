@@ -2,7 +2,7 @@
 
 ## Mission
 
-Build the application defined in `SPEC.md`: a production-quality, browser-based, 2–6 player falling-block game using a single Bun/TypeScript server, native WebSockets, and a static Svelte 5 SPA.
+Build the application defined in `SPEC.md`: a production-quality, browser-based, 2–5 player falling-block game using a single Bun/TypeScript server, native WebSockets, and a static Svelte 5 SPA.
 
 `SPEC.md` is the product and technical source of truth. This file defines how coding agents must work in the repository.
 
@@ -33,7 +33,7 @@ Do not trade correctness or tests for visual polish.
 - WebSockets: native `Bun.serve` WebSocket support.
 - One production process serves both static assets and `/ws`.
 - Rooms are in memory; no database or external backend service.
-- Room capacity is six players.
+- Room capacity is five players.
 - The server is authoritative.
 - Clients send inputs only, not board state, score, line clears, attacks, or results.
 - The core game engine is deterministic and independent of UI, WebSocket, and timer APIs.
@@ -481,7 +481,7 @@ Do not:
 - Send complete snapshots at 60 Hz.
 - Create one `setInterval` per player.
 - Store game state directly in Svelte components.
-- Render 1,200+ reactive cell elements for six boards.
+- Render 1,000+ reactive cell elements for five boards.
 - Ignore WebSocket backpressure.
 - Retry reconnect forever after a definitive rejection.
 - Build a database, authentication system, or matchmaking service for the MVP.

@@ -9,7 +9,7 @@ Implement rooms, sessions, WebSocket handshake, and lobby lifecycle on Bun.
 - Bun HTTP server and `/ws` endpoint.
 - Hello handshake.
 - Room creation and joining.
-- Room codes and six-player capacity.
+- Room codes and five-player capacity.
 - Display names.
 - Host ownership and migration.
 - Ready state and leave handling.
@@ -18,7 +18,7 @@ Implement rooms, sessions, WebSocket handshake, and lobby lifecycle on Bun.
 
 ## Acceptance Criteria
 
-- Two to six clients can join a room.
+- Two to five clients can join a room.
 - A seventh client is rejected without disrupting the room.
 - Only the host can start or return to lobby.
 - Host migration and room cleanup are tested.

@@ -28,7 +28,7 @@ Run the browser suite independently with:
 bun run test:e2e
 ```
 
-Capture the multiplayer layout at mobile and desktop sizes for 2–6 players:
+Capture the multiplayer layout at mobile and desktop sizes for 2–5 players:
 
 ```bash
 bun run screenshots
@@ -86,11 +86,11 @@ Run the deterministic synthetic load check with:
 bun run test:performance
 ```
 
-It advances 50 six-player rooms for 600 fixed ticks in one Bun process. The
-check fails if average global tick work reaches 8 ms or a six-player snapshot
-reaches 20 KiB. It also reports aggregate outbound traffic for all six clients;
+It advances 50 five-player rooms for 600 fixed ticks in one Bun process. The
+check fails if average global tick work reaches 8 ms or a five-player snapshot
+reaches 20 KiB. It also reports aggregate outbound traffic for all five clients;
 the current measurement is approximately 642 KiB/s per room, above the SPEC's
-approximate 400 KiB/s target, because each full snapshot is sent to six clients.
+approximate 400 KiB/s target, because each full snapshot is sent to five clients.
 Results are machine-dependent and printed as JSON.
 
 An optional non-root container is available:
@@ -176,6 +176,9 @@ docker compose up -d --build
   scoring, garbage, and match outcomes remain server-owned. Opponent pieces
   interpolate between recent snapshots and snap for discrete events. Ping/pong
   samples provide informational latency and lowest-RTT clock-offset estimates.
+- Active matches use a viewport-sized `100dvh` shell. The local board scales from
+  available height, while mobile keeps opponent boards behind the existing toggle
+  so the playable board and controls remain visible without page scrolling.
 - Active gameplay prioritizes the local board with a hold rail, visual next-piece
   previews, compact live statistics, and a denser opponent rail. Connection state
   is shown in the match header and keyboard help is collapsed until requested.
@@ -184,7 +187,7 @@ docker compose up -d --build
 
 - The performance harness measures deterministic room update and JSON snapshot
   work, not browser rendering FPS or physical-network bandwidth. Aggregate
-  six-client snapshot traffic currently exceeds the approximate SPEC target and
+  five-client snapshot traffic currently exceeds the approximate SPEC target and
   remains a documented optimization item.
 - Docker image verification depends on Docker being installed in the execution
   environment.

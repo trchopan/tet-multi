@@ -16,7 +16,7 @@ Run synchronized multiplayer matches on the server using the pure engine.
 
 ## Acceptance Criteria
 
-- Two to six clients share one authoritative match.
+- Two to five clients share one authoritative match.
 - Clients can send actions only.
 - Clients cannot submit board, score, attack, or result state.
 - Repeated deterministic inputs produce identical outcomes.

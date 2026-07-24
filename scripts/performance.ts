@@ -1,9 +1,10 @@
 import { performance } from 'node:perf_hooks';
 import { Room } from '../src/server/room';
+import { MAX_PLAYERS_PER_ROOM } from '../src/shared/constants';
 import type { SocketLike } from '../src/server/session';
 
 const ROOM_COUNT = 50;
-const PLAYERS_PER_ROOM = 6;
+const PLAYERS_PER_ROOM = MAX_PLAYERS_PER_ROOM;
 const TICKS = 600;
 
 class BenchmarkSocket implements SocketLike {

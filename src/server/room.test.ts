@@ -81,7 +81,7 @@ describe('room lifecycle', () => {
 		expect(restored?.connected).toBe(true);
 		expect(restored?.matchState).toBe('waiting');
 	});
-	test('creates six sessions and rejects a seventh', () => {
+	test('creates five sessions and rejects a sixth', () => {
 		const manager = new RoomManager({
 			randomBytes: () => Uint8Array.from([0, 1, 2, 3, 4, 5]),
 			createId: ids,
@@ -90,7 +90,7 @@ describe('room lifecycle', () => {
 		});
 		const sockets = Array.from({ length: 7 }, () => new FakeSocket());
 		const created = manager.createRoom('client-0', 'Player 0', sockets[0]!);
-		for (let index = 1; index < 6; index += 1)
+		for (let index = 1; index < 5; index += 1)
 			expect(
 				manager.joinRoom(
 					created.room.code,
@@ -101,12 +101,12 @@ describe('room lifecycle', () => {
 			).toBeDefined();
 		const rejected = manager.joinRoom(
 			created.room.code,
-			'client-6',
-			'Player 6',
+			'client-5',
+			'Player 5',
 			sockets[6]!,
 		);
 		expect(rejected.error).toBe('ROOM_FULL');
-		expect(created.room.playerCount).toBe(6);
+		expect(created.room.playerCount).toBe(5);
 	});
 
 	test('requires readiness and host authorization before countdown', () => {
