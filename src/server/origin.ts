@@ -3,6 +3,7 @@ export const isAllowedOrigin = (
 	allowedOrigins: ReadonlySet<string>,
 	production: boolean,
 ): boolean => {
-	if (origin === null) return !production;
+	if (!production) return true;
+	if (origin === null) return false;
 	return allowedOrigins.has(origin);
 };
