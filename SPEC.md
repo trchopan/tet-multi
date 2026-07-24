@@ -16,7 +16,7 @@ This document is authoritative for the initial implementation. When implementati
 
 ## 2. Product summary
 
-Build a browser-based, real-time, multiplayer falling-block game for 2–6 players. Each player controls an independent 10-column board. All active boards are visible simultaneously in a responsive grid. A Bun server owns the authoritative game state, validates player input, advances every board, resolves attacks, and broadcasts state snapshots to all clients in the room.
+Build a browser-based, real-time, multiplayer falling-block game for 2–5 players. Each player controls an independent 10-column board. All active boards are available in a responsive layout, with opponents collapsible on mobile. A Bun server owns the authoritative game state, validates player input, advances every board, resolves attacks, and broadcasts state snapshots to all clients in the room.
 
 The application must run as one deployable Bun service:
 
@@ -41,7 +41,7 @@ The first release prioritizes correctness, deterministic behavior, clear code bo
 ## 3. Goals
 
 1. Allow a player to create a room and share a short room code or URL.
-2. Allow 2–6 players to join the same room from modern desktop browsers.
+2. Allow 2–5 players to join the same room from modern desktop browsers.
 3. Show all player boards in real time on every client.
 4. Make the server authoritative for all gameplay and match outcomes.
 5. Keep local controls responsive through client-side visual prediction and server reconciliation.
@@ -101,7 +101,7 @@ The game may use familiar falling-block mechanics, but all visual assets, names,
 3. The host selects **Start match**.
 4. Start is allowed only when:
    - There are at least 2 connected players.
-   - There are no more than 6 players.
+   - There are no more than 5 players.
    - Every connected player is ready.
    - No countdown or match is already active.
 5. The server broadcasts a three-second countdown.
@@ -950,10 +950,10 @@ Development may use Vite for the frontend and Bun watch mode for the server, but
 
 ### 22.3 Game grid
 
-For six players on desktop, use a 3 × 2 grid. For fewer players, use the largest readable balanced grid.
+For five players on desktop, use a primary local board with compact opponent cards that also show opponent boards. On mobile, opponent cards are hidden by default and revealed with a toggle.
 
 ```text
-6 players: 3 columns × 2 rows
+5 players: primary local board plus four compact opponent boards
 5 players: 3 columns, centered final row
 4 players: 2 × 2
 3 players: 3 × 1 or 2 + 1 depending on width
@@ -1073,11 +1073,11 @@ Never log every simulation tick or ordinary movement input at info level.
 
 On a typical modern laptop running one Bun process:
 
-- Support at least 50 simultaneous six-player rooms in a synthetic server test without simulation falling more than 100 ms behind for sustained periods.
+- Support at least 50 simultaneous five-player rooms in a synthetic server test without simulation falling more than 100 ms behind for sustained periods.
 - Keep average server tick work below 8 ms at that load.
-- Keep a normal full six-player JSON snapshot under 20 KiB where practical.
-- Keep normal outbound traffic below approximately 400 KiB/s per six-player room at 20 snapshots/s.
-- Maintain 60 FPS rendering on a current desktop browser with six visible boards.
+- Keep a normal full five-player JSON snapshot under 20 KiB where practical.
+- Keep normal outbound traffic below approximately 400 KiB/s per five-player room at 20 snapshots/s.
+- Maintain 60 FPS rendering on a current desktop browser with five visible boards.
 - Avoid per-frame Svelte object churn for board cells; Canvas drawing should consume compact arrays.
 
 These are engineering targets, not a commitment to horizontal scaling.
@@ -1257,7 +1257,7 @@ Deliver:
 
 Exit criteria:
 
-- Two to six clients can complete a match and agree on the winner.
+- Two to five clients can complete a match and agree on the winner.
 - Clients cannot submit board or score state.
 
 ### Milestone 4: Competitive rules
@@ -1315,7 +1315,7 @@ Exit criteria:
 The implementation is accepted when all statements are true:
 
 1. A new user can create a room and copy a working invite URL.
-2. Between two and six users can join from separate browser contexts.
+2. Between two and five users can join from separate browser contexts.
 3. A seventh player is rejected without disrupting the room.
 4. Only the host can start a match or return results to the lobby.
 5. A match cannot start until all connected players are ready.

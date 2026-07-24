@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { RoomSnapshot } from '../../shared/types';
+	import { MAX_PLAYERS_PER_ROOM } from '../../shared/constants';
 	import { getLobbyStartState } from '../client/lobby';
 
 	let {
@@ -69,7 +70,9 @@
 			{copied ? 'Invite copied' : 'Copy invite URL'}
 		</button>
 	</div>
-	<p class="capacity">{snapshot.players.length} / 6 players</p>
+	<p class="capacity">
+		{snapshot.players.length} / {MAX_PLAYERS_PER_ROOM} players
+	</p>
 	<p class="connection" role="status" aria-live="polite">
 		{connectionState === 'connected'
 			? 'Connected'
