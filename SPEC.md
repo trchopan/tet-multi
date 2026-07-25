@@ -61,7 +61,6 @@ The MVP must not include:
 - Public matchmaking or a room browser
 - Spectators
 - Voice or text chat
-- Mobile touch controls
 - Multiple server instances sharing rooms
 - Serverless or edge-runtime deployment
 - Replay files
@@ -452,6 +451,24 @@ Client input handling defaults:
 | Hold | C | Shift |
 
 Prevent default browser scrolling for active gameplay keys while the game canvas has control focus.
+
+### 13.5 Touch controls
+
+The local board accepts primary touch-pointer swipes in addition to keyboard
+controls:
+
+- A horizontal swipe of at least 32 CSS pixels moves left or right.
+- An upward swipe of at least 32 CSS pixels rotates clockwise.
+- A downward swipe of at least 32 CSS pixels emits one soft-drop action
+  immediately.
+- A second consecutive downward swipe completed within 300 ms emits one hard-drop
+  action instead.
+- Taps and diagonal gestures without a dominant axis are ignored.
+- A non-downward gesture, cancelled gesture, or lost pointer capture resets the
+  pending double-down sequence.
+- Mouse, pen, and non-primary touch pointers do not generate gameplay input.
+- The local board disables browser touch handling while preserving keyboard focus
+  and controls.
 
 ---
 
@@ -1153,6 +1170,8 @@ At minimum:
 - Lobby ready state and disabled start reason.
 - Board canvas resize behavior.
 - Keyboard input mapping and DAS/ARR.
+- Touch swipe mapping, pointer capture, focus, cancellation, and double-swipe
+  timing.
 - Reconnect status transitions.
 - Prediction reconciliation with acknowledged and pending inputs.
 
@@ -1169,6 +1188,8 @@ Use Playwright browser contexts to verify:
 7. An intentionally scripted top-out finishes the match.
 8. Both clients display the same winner.
 9. Host returns the room to the lobby.
+10. A touch-enabled client can move the local active piece with a swipe without
+    changing an opponent board.
 
 A test-only server control may inject deterministic board fixtures, but it must be unavailable in production builds.
 
@@ -1356,7 +1377,8 @@ The implementation is accepted when all statements are true:
 15. Invalid messages, duplicate input sequences, and excessive input rates are rejected safely.
 16. Static Svelte assets and `/ws` are served by the same Bun application in production.
 17. `bun run verify` passes.
-18. The repository contains current `README.md`, `SPEC.md`, and `AGENTS.md` files.
+18. The local board supports the specified primary-touch swipe controls.
+19. The repository contains current `README.md`, `SPEC.md`, and `AGENTS.md` files.
 
 ---
 
@@ -1367,7 +1389,6 @@ These are explicitly deferred but the architecture should not make them impossib
 - Spectators
 - Private room passwords
 - Custom controls
-- Touch controls
 - Replays from seed and input log
 - Ranked matchmaking
 - Persistent accounts and statistics

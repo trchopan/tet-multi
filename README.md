@@ -75,6 +75,10 @@ Focus the game board, then use the following controls:
 - Up / X: rotate clockwise
 - Z / Q: rotate counterclockwise
 - C / Shift: hold
+- Swipe left / right: move
+- Swipe up: rotate clockwise
+- Swipe down: soft drop
+- Swipe down twice within 300 ms: hard drop
 
 The production build uses SvelteKit's static adapter with `index.html` as the
 SPA fallback. The Bun server serves that artifact and the native `/ws` room
@@ -191,6 +195,8 @@ docker compose up -d --build
 - Active gameplay prioritizes the local board with a hold rail, visual next-piece
   previews, compact live statistics, and a denser opponent rail. Connection state
   is shown in the match header and keyboard help is collapsed until requested.
+
+Touch controls are supported on the local canvas: pointer swipes move left or right, rotate upward, soft drop downward, and hard drop on a second downward swipe within 300 ms. Short and ambiguous diagonal gestures are ignored.
 
 ## Current Limitations
 

@@ -3,6 +3,9 @@ import type { InputAction } from '../../shared/types';
 export const DAS_MS = 140;
 export const ARR_MS = 40;
 export const SOFT_DROP_MS = 35;
+export const SWIPE_MIN_DISTANCE = 32;
+export const SWIPE_AXIS_RATIO = 1.25;
+export const DOUBLE_SWIPE_MS = 300;
 
 export interface KeyboardEventTarget {
 	addEventListener(
@@ -13,6 +16,21 @@ export interface KeyboardEventTarget {
 		type: 'keydown' | 'keyup',
 		listener: (event: Event) => void,
 	): void;
+}
+
+export interface PointerEventTarget {
+	addEventListener(
+		type: 'pointerdown' | 'pointerup' | 'pointercancel' | 'lostpointercapture',
+		listener: (event: Event) => void,
+	): void;
+	removeEventListener(
+		type: 'pointerdown' | 'pointerup' | 'pointercancel' | 'lostpointercapture',
+		listener: (event: Event) => void,
+	): void;
+	setPointerCapture(pointerId: number): void;
+	hasPointerCapture(pointerId: number): boolean;
+	releasePointerCapture(pointerId: number): void;
+	focus(): void;
 }
 
 const keyActions: Readonly<Record<string, InputAction>> = {
@@ -124,5 +142,119 @@ export class KeyboardInput {
 		this.target.removeEventListener('keyup', this.handleKeyUp);
 		this.pressed.clear();
 		this.horizontalOrder = [];
+	}
+}
+
+export class SwipeInput {
+	private readonly target: PointerEventTarget;
+	private pointerId: number | undefined;
+	private startX = 0;
+	private startY = 0;
+	private lastDownSwipeAt: number | undefined;
+
+	private readonly handlePointerDown = (event: Event): void => {
+		const pointerEvent = event as PointerEvent;
+		if (
+			this.pointerId !== undefined ||
+			pointerEvent.pointerType !== 'touch' ||
+			!pointerEvent.isPrimary
+		)
+			return;
+		pointerEvent.preventDefault();
+		this.target.focus();
+		this.pointerId = pointerEvent.pointerId;
+		this.startX = pointerEvent.clientX;
+		this.startY = pointerEvent.clientY;
+		this.target.setPointerCapture(pointerEvent.pointerId);
+	};
+
+	private readonly handlePointerUp = (event: Event): void => {
+		const pointerEvent = event as PointerEvent;
+		if (pointerEvent.pointerId !== this.pointerId) return;
+		pointerEvent.preventDefault();
+		const dx = pointerEvent.clientX - this.startX;
+		const dy = pointerEvent.clientY - this.startY;
+		this.clearPointer(pointerEvent.pointerId);
+
+		const distanceX = Math.abs(dx);
+		const distanceY = Math.abs(dy);
+		if (Math.max(distanceX, distanceY) < SWIPE_MIN_DISTANCE) {
+			this.lastDownSwipeAt = undefined;
+			return;
+		}
+
+		if (distanceX >= distanceY * SWIPE_AXIS_RATIO) {
+			this.lastDownSwipeAt = undefined;
+			this.emit(dx < 0 ? 'move_left' : 'move_right');
+			return;
+		}
+		if (distanceY < distanceX * SWIPE_AXIS_RATIO) {
+			this.lastDownSwipeAt = undefined;
+			return;
+		}
+		if (dy < 0) {
+			this.lastDownSwipeAt = undefined;
+			this.emit('rotate_cw');
+			return;
+		}
+
+		const now = this.now();
+		const isDoubleSwipe =
+			this.lastDownSwipeAt !== undefined &&
+			now >= this.lastDownSwipeAt &&
+			now - this.lastDownSwipeAt <= DOUBLE_SWIPE_MS;
+		this.lastDownSwipeAt = isDoubleSwipe ? undefined : now;
+		this.emit(isDoubleSwipe ? 'hard_drop' : 'soft_drop');
+	};
+
+	private readonly handlePointerCancel = (event: Event): void => {
+		const pointerEvent = event as PointerEvent;
+		if (pointerEvent.pointerId !== this.pointerId) return;
+		this.clearPointer(pointerEvent.pointerId);
+		this.lastDownSwipeAt = undefined;
+	};
+
+	private readonly handleLostPointerCapture = (event: Event): void => {
+		const pointerEvent = event as PointerEvent;
+		if (pointerEvent.pointerId !== this.pointerId) return;
+		this.pointerId = undefined;
+		this.lastDownSwipeAt = undefined;
+	};
+
+	public constructor(
+		target: PointerEventTarget,
+		private readonly onAction: (action: InputAction) => void,
+		private readonly now: () => number = () => performance.now(),
+	) {
+		this.target = target;
+		target.addEventListener('pointerdown', this.handlePointerDown);
+		target.addEventListener('pointerup', this.handlePointerUp);
+		target.addEventListener('pointercancel', this.handlePointerCancel);
+		target.addEventListener(
+			'lostpointercapture',
+			this.handleLostPointerCapture,
+		);
+	}
+
+	private emit(action: InputAction): void {
+		this.onAction(action);
+	}
+
+	private clearPointer(pointerId: number): void {
+		if (this.target.hasPointerCapture(pointerId))
+			this.target.releasePointerCapture(pointerId);
+		this.pointerId = undefined;
+	}
+
+	public dispose(): void {
+		this.target.removeEventListener('pointerdown', this.handlePointerDown);
+		this.target.removeEventListener('pointerup', this.handlePointerUp);
+		this.target.removeEventListener('pointercancel', this.handlePointerCancel);
+		this.target.removeEventListener(
+			'lostpointercapture',
+			this.handleLostPointerCapture,
+		);
+		if (this.pointerId !== undefined) this.clearPointer(this.pointerId);
+		this.lastDownSwipeAt = undefined;
 	}
 }
