@@ -24,7 +24,12 @@ import {
 	type AttackPacket,
 	type MatchState,
 } from '../game/match';
-import { createBotController, nextBotAction, type BotController } from './bot';
+import {
+	createBotController,
+	invalidateBotPlan,
+	nextBotAction,
+	type BotController,
+} from './bot';
 import { serializeBoard } from '../game/board';
 import type {
 	RoomSnapshot,
@@ -322,7 +327,10 @@ export class Room {
 				this.lastAcceptedInput.set(session.playerId, 0);
 				this.attackSent.set(session.playerId, 0);
 				if (session.playerType === 'computer')
-					this.botControllers.set(session.playerId, createBotController());
+					this.botControllers.set(
+						session.playerId,
+						createBotController(this.matchSeed, rosterIndex),
+					);
 			}
 			this.broadcast({
 				type: 'match_started',
@@ -475,7 +483,11 @@ export class Room {
 					input.sequence <= (this.lastProcessedInput.get(session.playerId) ?? 0)
 				)
 					continue;
-				applyInput(engine, input.action, false);
+				const applied = applyInput(engine, input.action, false);
+				if (!applied && session.playerType === 'computer') {
+					const controller = this.botControllers.get(session.playerId);
+					if (controller !== undefined) invalidateBotPlan(controller);
+				}
 				this.lastProcessedInput.set(session.playerId, input.sequence);
 				this.processPlacement(session.playerId, engine);
 			}

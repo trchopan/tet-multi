@@ -115,6 +115,16 @@ describe('deterministic engine foundation', () => {
 		expect(applyRotation(floor, true)).toBe(true);
 	});
 
+	test('supports a counterclockwise-only SRS kick', () => {
+		const state = createEngineState('rotation-counterclockwise');
+		state.activePiece = { kind: 'I', x: 7, y: 0, rotation: 1 };
+		state.board.cells[6] = 8;
+		state.board.cells[26] = 8;
+		const clockwise = cloneEngineState(state);
+		expect(applyRotation(clockwise, true)).toBe(false);
+		expect(applyRotation(state, false)).toBe(true);
+	});
+
 	test('rotation rejects a piece when every kick is blocked', () => {
 		const state = createEngineState('rotation-blocked');
 		state.activePiece = { kind: 'T', x: 3, y: 4, rotation: 0 };

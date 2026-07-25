@@ -89,8 +89,9 @@ bun run test:performance
 It advances 50 five-player rooms for 600 fixed ticks in one Bun process, using
 one human and four computer players per room to exercise the bot workload. The
 check warns if average global tick work reaches 8 ms or aggregate traffic
-exceeds the SPEC's approximate 400 KiB/s target, and fails if a five-player
-snapshot reaches 20 KiB. Results are machine-dependent and printed as JSON.
+exceeds the SPEC's approximate 400 KiB/s target, fails if p95 global tick work
+reaches 100 ms, and fails if a five-player snapshot reaches 20 KiB. Results are
+machine-dependent and printed as JSON.
 
 An optional non-root container is available:
 
@@ -178,8 +179,12 @@ docker compose up -d --build
 - Computer players are server-owned lobby participants. The host can add up to
   four computers, counted within the five-player room capacity, and remove them
   before starting a match. Their deterministic rule-based controller evaluates
-  legal placements on cloned engine states, selects among the strongest few,
-  and submits delayed actions through the same authoritative room input queue.
+  legal placements on cloned engine states, uses a bounded next-piece lookahead
+  with hold evaluation, and submits human-paced actions through the same
+  authoritative room input queue. Reaction and action delays use fixed-tick,
+  deterministic variation with per-match phase offsets; stale plans are
+  discarded if gravity locks a piece or an action is rejected before the plan
+  completes.
 - Active matches use a viewport-sized `100dvh` shell. The local board scales from
   available height, while mobile keeps opponent boards behind the existing toggle
   so the playable board and controls remain visible without page scrolling.

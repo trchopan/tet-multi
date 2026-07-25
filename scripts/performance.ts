@@ -57,6 +57,7 @@ const start = performance.now();
 let largestSnapshot = 0;
 let largestGlobalTickMs = 0;
 let totalSnapshotBytes = 0;
+const tickDurations: number[] = [];
 for (let tick = 1; tick <= TICKS; tick += 1) {
 	const now = 3000 + tick * (1000 / 60);
 	const tickStart = performance.now();
@@ -71,13 +72,17 @@ for (let tick = 1; tick <= TICKS; tick += 1) {
 		for (const socket of sockets) totalSnapshotBytes += socket.bytes;
 		for (const socket of sockets) socket.bytes = 0;
 	}
-	largestGlobalTickMs = Math.max(
-		largestGlobalTickMs,
-		performance.now() - tickStart,
-	);
+	const tickDuration = performance.now() - tickStart;
+	tickDurations.push(tickDuration);
+	largestGlobalTickMs = Math.max(largestGlobalTickMs, tickDuration);
 }
 const elapsed = performance.now() - start;
 const averageGlobalTickMs = elapsed / TICKS;
+const sortedTickDurations = [...tickDurations].sort(
+	(first, second) => first - second,
+);
+const p95GlobalTickMs =
+	sortedTickDurations[Math.max(0, Math.ceil(TICKS * 0.95) - 1)] ?? 0;
 const trafficPerRoomPerSecond = totalSnapshotBytes / ROOM_COUNT / (TICKS / 60);
 const result = {
 	rooms: ROOM_COUNT,
@@ -87,6 +92,7 @@ const result = {
 	ticksPerRoom: TICKS,
 	elapsedMs: Number(elapsed.toFixed(2)),
 	averageGlobalTickMs: Number(averageGlobalTickMs.toFixed(4)),
+	p95GlobalTickMs: Number(p95GlobalTickMs.toFixed(4)),
 	largestGlobalTickMs: Number(largestGlobalTickMs.toFixed(4)),
 	largestSnapshotBytes: largestSnapshot,
 	averageOutboundBytesPerRoomPerSecond: Number(
@@ -96,6 +102,8 @@ const result = {
 console.log(JSON.stringify(result, null, 2));
 if (averageGlobalTickMs >= 8)
 	console.warn('Warning: average global tick work exceeded 8 ms');
+if (p95GlobalTickMs >= 100)
+	throw new Error('P95 global tick work exceeded 100 ms');
 if (largestSnapshot >= 20 * 1024)
 	throw new Error('Six-player snapshot exceeded 20 KiB');
 if (trafficPerRoomPerSecond >= 400 * 1024)
