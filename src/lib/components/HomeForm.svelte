@@ -2,59 +2,25 @@
 	let {
 		onCreate,
 		onJoin,
-		initialName = '',
 	}: {
-		onCreate: (displayName: string) => void;
-		onJoin: (displayName: string, roomCode: string) => void;
-		initialName?: string;
+		onCreate: () => void;
+		onJoin: (roomCode: string) => void;
 	} = $props();
 
-	let displayName = $state('');
 	let roomCode = $state('');
 	let error = $state('');
-	let initialized = false;
-	$effect(() => {
-		if (!initialized) {
-			displayName = initialName;
-			initialized = true;
-		}
-	});
-
-	const validName = (): string | undefined => {
-		const value = displayName.trim();
-		if (value.length < 1 || [...value].length > 20)
-			return 'Choose a display name from 1 to 20 characters.';
-		if (
-			[...value].some((character) =>
-				/[\p{Cc}\p{Cf}\p{Cs}\p{Zl}\p{Zp}]/u.test(character),
-			)
-		)
-			return 'Display names cannot contain control characters.';
-		return undefined;
-	};
 
 	const create = (): void => {
-		const validation = validName();
-		if (validation !== undefined) {
-			error = validation;
-			return;
-		}
-		error = '';
-		onCreate(displayName.trim());
+		onCreate();
 	};
 
 	const join = (): void => {
-		const validation = validName();
-		if (validation !== undefined) {
-			error = validation;
-			return;
-		}
 		if (!/^[A-HJ-NP-Z2-9]{6}$/i.test(roomCode.trim())) {
 			error = 'Enter a valid six-character room code.';
 			return;
 		}
 		error = '';
-		onJoin(displayName.trim(), roomCode.trim().toUpperCase());
+		onJoin(roomCode.trim().toUpperCase());
 	};
 </script>
 
@@ -62,17 +28,6 @@
 	<p class="eyebrow">Multiplayer falling-block arena</p>
 	<h1 id="home-title">tet-multi</h1>
 	<p class="lede">Build a room, invite your crew, and outlast the stack.</p>
-
-	<label for="display-name">Display name</label>
-	<input
-		id="display-name"
-		bind:value={displayName}
-		autocomplete="nickname"
-		aria-describedby="display-name-help"
-	/>
-	<p id="display-name-help" class="field-help">
-		1–20 visible Unicode characters
-	</p>
 
 	<div class="actions">
 		<button type="button" onclick={create}>Create room</button>
@@ -127,11 +82,6 @@
 	}
 	.lede {
 		color: #c4c1d4;
-	}
-	.field-help {
-		margin: -0.7rem 0 1rem;
-		color: #aaa5c0;
-		font-size: 0.75rem;
 	}
 	label,
 	.controls {

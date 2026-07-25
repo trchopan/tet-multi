@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import GameGrid from '../../../lib/components/GameGrid.svelte';
 	import Lobby from '../../../lib/components/Lobby.svelte';
-	import HomeForm from '../../../lib/components/HomeForm.svelte';
+	import RoomEntryForm from '../../../lib/components/RoomEntryForm.svelte';
 	import Results from '../../../lib/components/Results.svelte';
 	import {
 		getStoredDisplayName,
@@ -14,14 +14,17 @@
 	import { page } from '$app/state';
 
 	const code = $derived(page.params.code?.toUpperCase() ?? '');
-	const session = new MultiplayerSession();
+	const createMode = $derived(code === 'NEW');
+	const session = new MultiplayerSession((roomCode) => {
+		if (createMode) globalThis.location.href = `/room/${roomCode}`;
+	});
 	let name = $state('');
 	let now = $state(Date.now());
 	let joined = $state(false);
 
 	onMount(() => {
 		name = getStoredDisplayName();
-		if (name.length > 0) {
+		if (!createMode && name.length > 0) {
 			session.reconnect(code, name);
 			joined = true;
 		}
@@ -35,7 +38,8 @@
 	const connect = (displayName: string): void => {
 		name = displayName;
 		saveDisplayName(displayName);
-		session.joinRoom(code, displayName);
+		if (createMode) session.createRoom(displayName);
+		else session.joinRoom(code, displayName);
 		joined = true;
 	};
 	const offset = $derived(session.serverOffsetMs);
@@ -55,17 +59,23 @@
 </script>
 
 <svelte:head>
-	<title>{code} | tet-multi</title>
-	<meta name="description" content={`tet-multi room ${code}`} />
+	<title>{createMode ? 'Create room' : `${code} | tet-multi`}</title>
+	<meta
+		name="description"
+		content={createMode ? 'Create a tet-multi room.' : `tet-multi room ${code}`}
+	/>
 </svelte:head>
 
 <main class:match-page={activeMatch}>
 	{#if !joined}
-		<HomeForm
-			onCreate={connect}
-			onJoin={(displayName, roomCode) =>
-				roomCode === code && connect(displayName)}
+		<RoomEntryForm
+			title={createMode ? 'Create your room' : `Join room ${code}`}
+			description={createMode
+				? 'Choose your display name, then invite your crew.'
+				: 'Choose your display name to enter the waiting room.'}
+			submitLabel={createMode ? 'Create room' : 'Join room'}
 			initialName={name}
+			onSubmit={connect}
 		/>
 	{:else if session.snapshot === undefined}
 		<section class="connecting" aria-live="polite">

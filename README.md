@@ -172,6 +172,10 @@ docker compose up -d --build
 - Development WebSocket connections use the Vite-provided server port to connect
   directly to Bun instead of traversing Vite's WebSocket proxy. This avoids noisy
   proxy pipe errors when a browser reloads or closes a room connection.
+- The home page only collects a room code or room intent. The room entry page
+  collects the display name immediately before creating or joining, so direct
+  invite URLs never redirect new users back to home. Returning users with a
+  stored name still reconnect automatically.
 - The multiplayer client keeps WebSocket/session state outside visual
   components, stores reconnect tokens by room code, retries transient
   disconnects with bounded exponential backoff, and uses authoritative

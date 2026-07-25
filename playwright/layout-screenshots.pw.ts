@@ -96,6 +96,7 @@ for (const viewport of viewports) {
 					throw new Error('Host page was not created');
 
 				await hostPage.goto('/');
+				await hostPage.getByRole('button', { name: 'Create room' }).click();
 				await hostPage.getByLabel('Display name').fill(hostName);
 				await hostPage.getByRole('button', { name: 'Create room' }).click();
 				await expect(hostPage.getByText('Waiting room')).toBeVisible();
@@ -113,7 +114,6 @@ for (const viewport of viewports) {
 
 					await page.goto(`/room/${roomCode}`);
 					await page.getByLabel('Display name').fill(displayName);
-					await page.getByLabel('Room code').fill(roomCode);
 					await page.getByRole('button', { name: 'Join room' }).click();
 					await expect(page.getByText('Waiting room')).toBeVisible();
 				}
