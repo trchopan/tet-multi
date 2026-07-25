@@ -10,7 +10,7 @@ export default defineConfig({
 	},
 	webServer: {
 		command:
-			'bun run build && PORT=4173 NODE_ENV=test RECONNECT_GRACE_MS=1000 CONNECTIONS_PER_MINUTE=100 ROOM_CREATIONS_PER_MINUTE=20 bun run src/server/index.ts',
+			'bun run build && PORT=4173 NODE_ENV=test RECONNECT_GRACE_MS=1000 CONNECTIONS_PER_MINUTE=100 ROOM_CREATIONS_PER_MINUTE=50 bun run src/server/index.ts',
 		url: 'http://127.0.0.1:4173/health',
 		reuseExistingServer:
 			process.env.PLAYWRIGHT_SCREENSHOTS !== 'true' && !process.env.CI,
