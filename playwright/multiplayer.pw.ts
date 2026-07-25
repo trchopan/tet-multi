@@ -125,3 +125,64 @@ test('a host can start a match against four computer players', async ({
 	await expect(page.locator('[data-match-id]')).toBeVisible({ timeout: 8_000 });
 	await expect(page.locator('canvas')).toHaveCount(5);
 });
+
+test('a touch-enabled client can swipe the local board', async ({
+	browser,
+}) => {
+	const context = await browser.newContext({
+		hasTouch: true,
+		isMobile: true,
+		viewport: { width: 390, height: 844 },
+	});
+	const page = await context.newPage();
+
+	try {
+		await page.goto('/');
+		await page.getByLabel('Display name').fill('Touch player');
+		await page.getByRole('button', { name: 'Create room' }).click();
+		await expect(page.getByText('Waiting room')).toBeVisible();
+		await page.getByRole('button', { name: 'Add computer' }).click();
+		await page.getByRole('button', { name: 'Ready up' }).click();
+		await page.getByRole('button', { name: 'Start match' }).click();
+		await expect(page.locator('[data-match-id]')).toBeVisible({
+			timeout: 8_000,
+		});
+		await expect(page.locator('.countdown')).toBeHidden({ timeout: 8_000 });
+
+		const localBoard = page.locator('canvas').first();
+		await expect(localBoard).toHaveCSS('touch-action', 'none');
+		await expect(localBoard).toHaveAttribute(
+			'aria-describedby',
+			'local-touch-controls-description',
+		);
+		const initialX = await localBoard.getAttribute('data-active-x');
+
+		await localBoard.evaluate((node) => {
+			const canvas = node as HTMLCanvasElement;
+			const originalSetPointerCapture = canvas.setPointerCapture;
+			canvas.setPointerCapture = () => {};
+			const dispatch = (type: 'pointerdown' | 'pointerup', x: number): void => {
+				canvas.dispatchEvent(
+					new PointerEvent(type, {
+						bubbles: true,
+						clientX: x,
+						clientY: 100,
+						isPrimary: true,
+						pointerId: 1,
+						pointerType: 'touch',
+					}),
+				);
+			};
+			dispatch('pointerdown', 100);
+			dispatch('pointerup', 40);
+			canvas.setPointerCapture = originalSetPointerCapture;
+		});
+
+		await expect(localBoard).not.toHaveAttribute(
+			'data-active-x',
+			initialX ?? '',
+		);
+	} finally {
+		await context.close();
+	}
+});

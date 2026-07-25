@@ -74,12 +74,14 @@
 		</div>
 		<details class="controls">
 			<summary>Controls <span>?</span></summary>
-			<div aria-label="Keyboard controls">
+			<div aria-label="Keyboard and touch controls">
 				<span>Left / A, Right / D move</span><span>Down / S soft drop</span>
 				<span>Space / W hard drop</span><span
 					>Up / X rotate, Z / Q counter-rotate</span
 				>
 				<span>C / Shift hold</span>
+				<span>Swipe left / right move, swipe up rotate</span>
+				<span>Swipe down soft drop, swipe down twice hard drop</span>
 			</div>
 		</details>
 	{:else}
