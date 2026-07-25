@@ -518,6 +518,224 @@ describe('room lifecycle', () => {
 		expect(snapshot.winnerPlayerIds).toEqual([second.playerId]);
 	});
 
+	test('finishes with shared computer winners after all humans are eliminated', () => {
+		let now = 0;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			createId: ids,
+			createSeed: () => 'computer-finish-seed',
+			createToken: ids,
+		});
+		const firstSocket = new FakeSocket();
+		const firstHuman = room.join('first', 'Alice', firstSocket, 0).session!;
+		const secondHuman = room.join(
+			'second',
+			'Bob',
+			new FakeSocket(),
+			0,
+		).session!;
+		const computers = [
+			room.addComputer(firstHuman.playerId, 'legendary', 0),
+			room.addComputer(firstHuman.playerId, 'challenger', 0),
+		];
+		room.setReady(firstHuman.playerId, true);
+		room.setReady(secondHuman.playerId, true);
+		room.start(firstHuman.playerId, now);
+		now = 3000;
+		room.update(now);
+
+		room.forceTestTopOut();
+		now += 17;
+		room.update(now);
+		expect(room.currentPhase).toBe('playing');
+
+		room.forceTestTopOut();
+		now += 17;
+		room.update(now);
+		const snapshot = room.snapshot(now);
+
+		expect(room.currentPhase).toBe('finished');
+		expect(snapshot.winnerPlayerIds).toEqual(
+			computers.map((computer) => computer.playerId),
+		);
+		expect(
+			snapshot.players
+				.filter((player) => player.playerType === 'computer')
+				.every((player) => player.placement === 1),
+		).toBe(true);
+		expect(
+			snapshot.players
+				.filter((player) => player.playerType === 'human')
+				.every((player) => player.matchState === 'eliminated'),
+		).toBe(true);
+		const finalMessage = JSON.parse(
+			firstSocket.messages.at(-1) ?? 'null',
+		) as unknown;
+		expect(validateServerMessage(finalMessage)).toBe(true);
+	});
+
+	test('finishes before removing computers when the last human explicitly leaves', () => {
+		let now = 0;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			createId: ids,
+			createSeed: () => 'computer-leave-finish-seed',
+			createToken: ids,
+		});
+		const socket = new FakeSocket();
+		const human = room.join('human', 'Alice', socket, 0).session!;
+		const computers = [
+			room.addComputer(human.playerId, 'legendary', 0),
+			room.addComputer(human.playerId, 'challenger', 0),
+		];
+		room.setReady(human.playerId, true);
+		room.start(human.playerId, now);
+		now = 3000;
+		room.update(now);
+
+		room.leave(human.playerId);
+		const finalMessage = JSON.parse(socket.messages.at(-1) ?? 'null') as {
+			type?: string;
+			snapshot?: {
+				phase?: string;
+				winnerPlayerIds?: string[];
+			};
+		};
+
+		expect(room.currentPhase).toBe('finished');
+		expect(finalMessage.type).toBe('room_snapshot');
+		expect(finalMessage.snapshot?.phase).toBe('finished');
+		expect(finalMessage.snapshot?.winnerPlayerIds).toEqual(
+			computers.map((computer) => computer.playerId),
+		);
+		expect(validateServerMessage(finalMessage)).toBe(true);
+	});
+
+	test('keeps a disconnected human active during reconnect grace', () => {
+		let now = 3000;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			reconnectGraceMs: 20,
+			createId: ids,
+			createSeed: () => 'computer-reconnect-seed',
+			createToken: ids,
+		});
+		const socket = new FakeSocket();
+		const human = room.join('human', 'Alice', socket, now).session!;
+		room.addComputer(human.playerId, 'legendary', now);
+		room.addComputer(human.playerId, 'challenger', now);
+		room.setReady(human.playerId, true);
+		room.start(human.playerId, now);
+		now = 6000;
+		room.update(now);
+
+		room.disconnect(human.playerId, 6010, socket);
+		now = 6029;
+		room.update(now);
+		expect(room.currentPhase).toBe('playing');
+		expect(
+			room.players.find((player) => player.playerId === human.playerId)
+				?.matchState,
+		).toBe('disconnected');
+
+		const replacement = new FakeSocket();
+		expect(
+			room.join('human', 'Alice', replacement, 6025, human.reconnectToken)
+				.result,
+		).toEqual({ ok: true });
+		now = 6030;
+		room.update(now);
+		expect(room.currentPhase).toBe('playing');
+		expect(
+			room.players.find((player) => player.playerId === human.playerId)
+				?.connected,
+		).toBe(true);
+	});
+
+	test('finishes with computer winners when human reconnect grace expires', () => {
+		let now = 3000;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			reconnectGraceMs: 20,
+			createId: ids,
+			createSeed: () => 'computer-expiry-finish-seed',
+			createToken: ids,
+		});
+		const socket = new FakeSocket();
+		const human = room.join('human', 'Alice', socket, now).session!;
+		const computers = [
+			room.addComputer(human.playerId, 'legendary', now),
+			room.addComputer(human.playerId, 'challenger', now),
+		];
+		room.setReady(human.playerId, true);
+		room.start(human.playerId, now);
+		now = 6000;
+		room.update(now);
+
+		room.disconnect(human.playerId, 6010, socket);
+		now = 6029;
+		room.update(now);
+		expect(room.currentPhase).toBe('playing');
+		now = 6030;
+		room.update(now);
+
+		expect(room.currentPhase).toBe('finished');
+		expect(room.snapshot().winnerPlayerIds).toEqual(
+			computers.map((computer) => computer.playerId),
+		);
+	});
+
+	test('excludes a computer eliminated on the same tick as the last human', () => {
+		let now = 0;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			createId: ids,
+			createSeed: () => 'simultaneous-computer-finish-seed',
+			createToken: ids,
+		});
+		const human = room.join('human', 'Alice', new FakeSocket(), 0).session!;
+		const computers = [
+			room.addComputer(human.playerId, 'legendary', 0),
+			room.addComputer(human.playerId, 'challenger', 0),
+		];
+		room.setReady(human.playerId, true);
+		room.start(human.playerId, now);
+		now = 3000;
+		room.update(now);
+
+		const engines = (
+			room as unknown as { engines: Map<string, GameEngineState> }
+		).engines;
+		const humanEngine = engines.get(human.playerId);
+		const eliminatedComputerEngine = engines.get(computers[0]!.playerId);
+		if (humanEngine === undefined || eliminatedComputerEngine === undefined)
+			throw new Error('Match engines were not initialized');
+		humanEngine.gameOver = true;
+		eliminatedComputerEngine.gameOver = true;
+
+		now += 17;
+		room.update(now);
+		const snapshot = room.snapshot(now);
+
+		expect(room.currentPhase).toBe('finished');
+		expect(snapshot.winnerPlayerIds).toEqual([computers[1]!.playerId]);
+		expect(
+			snapshot.players.find(
+				(player) => player.playerId === computers[0]!.playerId,
+			)?.matchState,
+		).toBe('eliminated');
+		expect(
+			snapshot.players.find(
+				(player) => player.playerId === computers[1]!.playerId,
+			)?.placement,
+		).toBe(1);
+	});
+
 	test('simultaneous grace expiry produces one final draw decision', () => {
 		let now = 0;
 		const room = new Room({

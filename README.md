@@ -191,6 +191,9 @@ docker compose up -d --build
   same authoritative room input queue. Reaction and action delays use fixed
   ticks with per-match phase offsets; stale plans are discarded if gravity
   locks a piece or an action is rejected before the plan completes.
+- If every human player is eliminated during a computer-player match, the room
+  finishes immediately and all remaining computers share the win; humans in
+  reconnect grace remain active.
 - Active matches use a viewport-sized `100dvh` shell. The local board scales from
   available height, while mobile keeps opponent boards behind the existing toggle
   so the playable board and controls remain visible without page scrolling.

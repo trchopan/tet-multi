@@ -507,7 +507,10 @@ export class Room {
 			this.processPlacement(session.playerId, engine);
 			if (engine.gameOver) eliminated.push(session.playerId);
 		}
-		if (eliminated.length > 0) this.eliminate(eliminated);
+		if (eliminated.length > 0) {
+			this.eliminate(eliminated);
+			if (this.phase !== 'playing') return;
+		}
 		this.pendingAttacks = retargetAttackPackets(
 			this.match!,
 			this.pendingAttacks,
@@ -552,9 +555,35 @@ export class Room {
 			const session = this.sessions.get(playerId);
 			if (session !== undefined) session.matchState = 'eliminated';
 		}
-		if (!result.finished) return;
+		if (result.finished) {
+			this.finishMatch(result.winnerPlayerIds);
+			return;
+		}
+		this.finishComputerOnlyMatch();
+	}
+
+	private finishComputerOnlyMatch(): void {
+		if (this.match === undefined || this.phase !== 'playing') return;
+		if (
+			this.players.some(
+				(session) =>
+					session.playerType === 'human' && session.matchState !== 'eliminated',
+			)
+		)
+			return;
+		const winners = this.match.players.filter(
+			(player) =>
+				!player.eliminated &&
+				this.sessions.get(player.playerId)?.playerType === 'computer',
+		);
+		if (winners.length === 0) return;
+		for (const winner of winners) winner.placement = 1;
+		this.finishMatch(winners.map((winner) => winner.playerId));
+	}
+
+	private finishMatch(winnerPlayerIds: readonly string[]): void {
 		this.phase = 'finished';
-		this.winnerPlayerIds = result.winnerPlayerIds;
+		this.winnerPlayerIds = [...winnerPlayerIds];
 		this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot() });
 	}
 
