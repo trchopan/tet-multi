@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { applyInput, createEngineState, hashEngineState } from '../game/engine';
-import { createBotController, nextBotAction } from './bot';
+import {
+	advanceTicks,
+	applyInput,
+	cancelIncomingGarbage,
+	createEngineState,
+	enqueueGarbage,
+	hashEngineState,
+	resolveReadyGarbage,
+	takeLastPlacement,
+} from '../game/engine';
+import { createBotController, invalidateBotPlan, nextBotAction } from './bot';
 
 const collectActions = (seed: string): string[] => {
 	const engine = createEngineState(seed, 0);
@@ -15,6 +24,26 @@ const collectActions = (seed: string): string[] => {
 };
 
 describe('computer player policy', () => {
+	test('paces actions at a human-like fixed-tick cadence', () => {
+		const engine = createEngineState('bot-seed', 0);
+		const controller = createBotController();
+		const actionTicks: number[] = [];
+		for (let tick = 0; tick < 100; tick += 1) {
+			const action = nextBotAction(controller, engine);
+			if (action !== undefined) {
+				actionTicks.push(tick);
+				applyInput(engine, action, false);
+			}
+			advanceTicks(engine, 1, false);
+		}
+		expect(actionTicks[0]).toBe(18);
+		expect(
+			actionTicks
+				.slice(1)
+				.every((tick, index) => tick - actionTicks[index]! >= 3),
+		).toBe(true);
+	});
+
 	test('produces deterministic delayed placement actions', () => {
 		const first = collectActions('bot-seed');
 		expect(first).toEqual(collectActions('bot-seed'));
@@ -29,6 +58,37 @@ describe('computer player policy', () => {
 		expect(hashEngineState(engine)).toBe(before);
 	});
 
+	test('abandons a plan when gravity has already spawned another piece', () => {
+		const engine = createEngineState('stale-plan-seed', 0);
+		const controller = createBotController();
+		for (let tick = 0; tick < 19; tick += 1) {
+			const action = nextBotAction(controller, engine);
+			if (action !== undefined) applyInput(engine, action, false);
+			advanceTicks(engine, 1, false);
+		}
+		const decisionCount = controller.decisionCount;
+		applyInput(engine, 'hard_drop', false);
+		const actionAfterExternalLock = nextBotAction(controller, engine);
+		const freshController = createBotController();
+		freshController.cooldown = 0;
+		freshController.decisionCount = decisionCount;
+		const actionFromFreshPlan = nextBotAction(freshController, engine);
+		expect(actionAfterExternalLock).toBe(actionFromFreshPlan);
+	});
+
+	test('clears all timing state when a planned action is rejected', () => {
+		const controller = createBotController();
+		controller.plan = ['move_left'];
+		controller.cooldown = 12;
+		controller.actionCooldown = 2;
+		controller.plannedPieceKey = 'planned-piece';
+		invalidateBotPlan(controller);
+		expect(controller.plan).toEqual([]);
+		expect(controller.cooldown).toBe(0);
+		expect(controller.actionCooldown).toBe(0);
+		expect(controller.plannedPieceKey).toBeUndefined();
+	});
+
 	test('completes successive legal placements on the simulated board', () => {
 		const engine = createEngineState('bot-stack-seed', 0);
 		const controller = createBotController();
@@ -41,5 +101,83 @@ describe('computer player policy', () => {
 			expect(engine.gameOver).toBe(false);
 		}
 		expect(hardDrops).toBe(5);
+	});
+
+	test('uses hold when it produces a stronger deterministic placement', () => {
+		const engine = createEngineState('hold-seed-3', 0);
+		const controller = createBotController();
+		const actions: string[] = [];
+		for (let tick = 0; tick < 100; tick += 1) {
+			const action = nextBotAction(controller, engine);
+			if (action !== undefined) {
+				actions.push(action);
+				applyInput(engine, action, false);
+				if (action === 'hard_drop') break;
+			}
+			advanceTicks(engine, 1, false);
+		}
+		expect(actions[0]).toBe('hold');
+	});
+
+	test('survives a sustained deterministic run across multiple seeds', () => {
+		for (let seedIndex = 0; seedIndex < 5; seedIndex += 1) {
+			const engine = createEngineState(`survival-${seedIndex}`, 0);
+			const controller = createBotController();
+			let hardDrops = 0;
+			for (let tick = 0; tick < 1800 && hardDrops < 30; tick += 1) {
+				const action = nextBotAction(controller, engine);
+				if (action !== undefined) {
+					applyInput(engine, action, false);
+					if (action === 'hard_drop') hardDrops += 1;
+				}
+				advanceTicks(engine, 1, false);
+			}
+			expect(engine.gameOver).toBe(false);
+			expect(hardDrops).toBeGreaterThanOrEqual(30);
+		}
+	});
+
+	test('continues legal play while delayed garbage is delivered', () => {
+		const engine = createEngineState('garbage-survival-seed', 0);
+		const controller = createBotController('garbage-match', 1);
+		enqueueGarbage(engine, 1, 5, engine.currentTick);
+		let hardDrops = 0;
+		const resolvePlacement = (): void => {
+			const placement = takeLastPlacement(engine);
+			if (placement === undefined) return;
+			cancelIncomingGarbage(engine, placement.attack);
+			if (resolveReadyGarbage(engine)) engine.gameOver = true;
+		};
+
+		for (let tick = 0; tick < 1200 && !engine.gameOver; tick += 1) {
+			const action = nextBotAction(controller, engine);
+			if (action !== undefined) {
+				applyInput(engine, action, false);
+				if (action === 'hard_drop') hardDrops += 1;
+				resolvePlacement();
+			}
+			advanceTicks(engine, 1, false);
+			resolvePlacement();
+		}
+		expect(engine.gameOver).toBe(false);
+		expect(hardDrops).toBeGreaterThanOrEqual(15);
+	});
+
+	test('replays the complete bot simulation deterministically', () => {
+		const run = (): { actions: string[]; hash: string } => {
+			const engine = createEngineState('bot-replay-seed', 0);
+			const controller = createBotController('bot-replay-match', 1);
+			const actions: string[] = [];
+			for (let tick = 0; tick < 1800 && !engine.gameOver; tick += 1) {
+				const action = nextBotAction(controller, engine);
+				if (action !== undefined) {
+					actions.push(`${tick}:${action}`);
+					applyInput(engine, action, false);
+				}
+				advanceTicks(engine, 1, false);
+			}
+			return { actions, hash: hashEngineState(engine) };
+		};
+		expect(run()).toEqual(run());
 	});
 });

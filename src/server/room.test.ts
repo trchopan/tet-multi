@@ -157,7 +157,7 @@ describe('room lifecycle', () => {
 			code: 'ABC234',
 			now: () => now,
 			createId: ids,
-			createSeed: () => 'bot-match-seed',
+			createSeed: () => 'test-seed',
 			createToken: ids,
 		});
 		const host = room.join('human', 'Alice', new FakeSocket(), 0).session!;
@@ -166,11 +166,61 @@ describe('room lifecycle', () => {
 		room.start(host.playerId, now);
 		now = 3000;
 		room.update(now);
-		for (let tick = 0; tick < 30; tick += 1) room.update((now += 17));
-		const player = room
+		for (let tick = 0; tick < 18; tick += 1) room.update((now += 17));
+		let player = room
 			.snapshot()
 			.players.find((candidate) => candidate.playerId === computer.playerId);
-		expect(player?.lastProcessedInput).toBeGreaterThan(0);
+		expect(player?.lastProcessedInput).toBe(0);
+		room.update((now += 17));
+		player = room
+			.snapshot()
+			.players.find((candidate) => candidate.playerId === computer.playerId);
+		expect(player?.lastProcessedInput).toBe(1);
+		room.update((now += 17));
+		room.update((now += 17));
+		const finalPlayer = room
+			.snapshot()
+			.players.find((candidate) => candidate.playerId === computer.playerId);
+		expect(finalPlayer?.lastProcessedInput).toBeGreaterThan(0);
+	});
+
+	test('invalid computer actions invalidate the remaining plan', () => {
+		let now = 0;
+		const room = new Room({
+			code: 'ABC234',
+			now: () => now,
+			createId: ids,
+			createSeed: () => 'test-seed',
+			createToken: ids,
+		});
+		const host = room.join('human', 'Alice', new FakeSocket(), 0).session!;
+		const computer = room.addComputer(host.playerId, 0);
+		room.setReady(host.playerId, true);
+		room.start(host.playerId, now);
+		now = 3000;
+		room.update(now);
+
+		const internals = room as unknown as {
+			engines: Map<string, GameEngineState>;
+			botControllers: Map<
+				string,
+				{ plan: string[]; cooldown: number; actionCooldown: number }
+			>;
+		};
+		const engine = internals.engines.get(computer.playerId);
+		const controller = internals.botControllers.get(computer.playerId);
+		if (engine === undefined || controller === undefined)
+			throw new Error('Computer internals were not initialized');
+		engine.board.cells.fill(0);
+		engine.activePiece = { kind: 'I', x: 0, y: 0, rotation: 0 };
+		controller.plan = ['move_left'];
+		controller.cooldown = 0;
+		controller.actionCooldown = 0;
+
+		room.update((now += 17));
+		expect(controller.plan).toEqual([]);
+		expect(controller.cooldown).toBe(0);
+		expect(controller.actionCooldown).toBe(0);
 	});
 
 	test('requires readiness and host authorization before countdown', () => {
