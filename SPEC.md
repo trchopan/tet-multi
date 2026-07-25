@@ -598,6 +598,11 @@ A player is eliminated when any of these occur:
 
 Placement order is determined by elimination tick, then by player join order for stable display only. Players eliminated on the same tick share the same placement rank. The last surviving player is the winner.
 
+In a match containing computer players, if every human player is eliminated,
+the match finishes immediately. All remaining non-eliminated computer players
+share the win and receive placement rank 1. A human player within reconnect
+grace remains active for this rule and can still resume the match.
+
 ---
 
 ## 16. Authoritative simulation
