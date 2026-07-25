@@ -36,7 +36,7 @@ describe('WebSocket lobby boundary', () => {
 			second,
 			JSON.stringify({
 				type: 'hello',
-				protocolVersion: 1,
+				protocolVersion: 2,
 				clientId: 'client-a',
 			}),
 		);
@@ -53,7 +53,7 @@ describe('WebSocket lobby boundary', () => {
 			socket,
 			JSON.stringify({
 				type: 'hello',
-				protocolVersion: 1,
+				protocolVersion: 2,
 				clientId: 'client-a',
 			}),
 		);
@@ -88,7 +88,7 @@ describe('WebSocket lobby boundary', () => {
 			first,
 			JSON.stringify({
 				type: 'hello',
-				protocolVersion: 1,
+				protocolVersion: 2,
 				clientId: 'client-a',
 			}),
 		);
@@ -107,7 +107,7 @@ describe('WebSocket lobby boundary', () => {
 			replacement,
 			JSON.stringify({
 				type: 'hello',
-				protocolVersion: 1,
+				protocolVersion: 2,
 				clientId: 'client-a',
 			}),
 		);

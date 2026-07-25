@@ -19,7 +19,7 @@ class FakeSocket implements SocketLike {
 const snapshot = (serverTick: number) => ({
 	type: 'room_snapshot' as const,
 	snapshot: {
-		protocolVersion: 1 as const,
+		protocolVersion: 2 as const,
 		roomCode: 'ABC234',
 		phase: 'lobby' as const,
 		hostPlayerId: 'player',

@@ -18,6 +18,7 @@ import {
 } from 'valibot';
 import {
 	BOARD_CELL_COUNT,
+	COMPUTER_DIFFICULTIES,
 	DISPLAY_NAME_MAX_LENGTH,
 	DISPLAY_NAME_MIN_LENGTH,
 	ERROR_CODES,
@@ -71,6 +72,7 @@ const roomCode = pipe(
 
 const protocolVersion = literal(PROTOCOL_VERSION);
 const pieceKind = literals(PIECE_KINDS);
+const computerDifficulty = literals(COMPUTER_DIFFICULTIES);
 const inputAction = literals(INPUT_ACTIONS);
 const roomPhase = literals(ROOM_PHASES);
 const playerMatchState = literals(PLAYER_MATCH_STATES);
@@ -107,7 +109,10 @@ export const ClientMessageSchema = union([
 		ready: boolean(),
 	}),
 	strictObject({ type: literal('start_match') }),
-	strictObject({ type: literal('add_computer') }),
+	strictObject({
+		type: literal('add_computer'),
+		difficulty: computerDifficulty,
+	}),
 	strictObject({
 		type: literal('remove_computer'),
 		playerId: identifier,
@@ -127,32 +132,42 @@ export const ClientMessageSchema = union([
 	}),
 ]);
 
-const playerSnapshot = strictObject({
-	playerId: identifier,
-	displayName,
-	shortId: identifier,
-	playerType: union([literal('human'), literal('computer')]),
-	joinedAt: unixMilliseconds,
-	connected: boolean(),
-	ready: boolean(),
-	isHost: boolean(),
-	matchState: playerMatchState,
-	placement: optional(positiveInteger),
-	eliminatedAtTick: optional(nonNegativeInteger),
-	board: optional(pipe(array(boardCellValue), length(BOARD_CELL_COUNT))),
-	activePiece: optional(activePiece),
-	hold: optional(pieceKind),
-	next: optional(pipe(array(pieceKind), length(NEXT_PREVIEW_COUNT))),
-	score: optional(nonNegativeInteger),
-	lines: optional(nonNegativeInteger),
-	level: optional(nonNegativeInteger),
-	combo: optional(pipe(number(), integer())),
-	maxCombo: optional(pipe(number(), integer())),
-	backToBack: optional(boolean()),
-	attackSent: optional(nonNegativeInteger),
-	incomingGarbage: optional(nonNegativeInteger),
-	lastProcessedInput: optional(nonNegativeInteger),
-});
+const playerSnapshot = pipe(
+	strictObject({
+		playerId: identifier,
+		displayName,
+		shortId: identifier,
+		playerType: union([literal('human'), literal('computer')]),
+		computerDifficulty: optional(computerDifficulty),
+		joinedAt: unixMilliseconds,
+		connected: boolean(),
+		ready: boolean(),
+		isHost: boolean(),
+		matchState: playerMatchState,
+		placement: optional(positiveInteger),
+		eliminatedAtTick: optional(nonNegativeInteger),
+		board: optional(pipe(array(boardCellValue), length(BOARD_CELL_COUNT))),
+		activePiece: optional(activePiece),
+		hold: optional(pieceKind),
+		next: optional(pipe(array(pieceKind), length(NEXT_PREVIEW_COUNT))),
+		score: optional(nonNegativeInteger),
+		lines: optional(nonNegativeInteger),
+		level: optional(nonNegativeInteger),
+		combo: optional(pipe(number(), integer())),
+		maxCombo: optional(pipe(number(), integer())),
+		backToBack: optional(boolean()),
+		attackSent: optional(nonNegativeInteger),
+		incomingGarbage: optional(nonNegativeInteger),
+		lastProcessedInput: optional(nonNegativeInteger),
+	}),
+	check(
+		(player) =>
+			player.playerType === 'computer'
+				? player.computerDifficulty !== undefined
+				: player.computerDifficulty === undefined,
+		'Computer snapshots require a difficulty and human snapshots must not have one',
+	),
+);
 
 export const RoomSnapshotSchema = strictObject({
 	protocolVersion,

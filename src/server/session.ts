@@ -1,5 +1,10 @@
 import type { ServerWebSocket } from 'bun';
-import type { PlayerMatchState, PlayerType } from '../shared/types';
+import { DEFAULT_COMPUTER_DIFFICULTY } from '../shared/constants';
+import type {
+	ComputerDifficulty,
+	PlayerMatchState,
+	PlayerType,
+} from '../shared/types';
 
 export interface SocketLike {
 	readonly readyState?: number;
@@ -35,6 +40,7 @@ export interface Session {
 	playerId: string;
 	clientId: string;
 	playerType: PlayerType;
+	computerDifficulty?: ComputerDifficulty;
 	displayName: string;
 	roomCode: string;
 	reconnectToken: string;
@@ -67,12 +73,17 @@ export const createComputerSession = (input: {
 	displayName: string;
 	roomCode: string;
 	joinedAt: number;
-}): Session => ({
-	...input,
-	clientId: `computer:${input.playerId}`,
-	reconnectToken: '',
-	playerType: 'computer',
-	connected: true,
-	ready: true,
-	matchState: 'waiting',
-});
+	difficulty?: ComputerDifficulty;
+}): Session => {
+	const { difficulty, ...session } = input;
+	return {
+		...session,
+		clientId: `computer:${input.playerId}`,
+		reconnectToken: '',
+		playerType: 'computer',
+		computerDifficulty: difficulty ?? DEFAULT_COMPUTER_DIFFICULTY,
+		connected: true,
+		ready: true,
+		matchState: 'waiting',
+	};
+};

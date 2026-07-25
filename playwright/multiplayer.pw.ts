@@ -115,10 +115,16 @@ test('a host can start a match against four computer players', async ({
 	await page.getByRole('button', { name: 'Create room' }).click();
 	await expect(page.getByText('Waiting room')).toBeVisible();
 
-	for (let index = 0; index < 4; index += 1)
+	const difficulties = ['beginner', 'challenger', 'legendary', 'beginner'];
+	for (const difficulty of difficulties) {
+		await page.getByLabel('Computer level').selectOption(difficulty);
 		await page.getByRole('button', { name: 'Add computer' }).click();
+	}
 	await expect(page.getByText('CPU 1')).toBeVisible();
 	await expect(page.getByText('CPU 4')).toBeVisible();
+	await expect(page.getByText(/Computer · Beginner/).first()).toBeVisible();
+	await expect(page.getByText(/Computer · Challenger/)).toBeVisible();
+	await expect(page.getByText(/Computer · Legendary/)).toBeVisible();
 	await page.getByRole('button', { name: 'Ready up' }).click();
 	await page.getByRole('button', { name: 'Start match' }).click();
 

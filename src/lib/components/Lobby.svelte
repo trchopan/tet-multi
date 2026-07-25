@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { RoomSnapshot } from '../../shared/types';
 	import {
+		COMPUTER_DIFFICULTIES,
 		MAX_COMPUTER_PLAYERS_PER_ROOM,
 		MAX_PLAYERS_PER_ROOM,
 	} from '../../shared/constants';
+	import type { ComputerDifficulty } from '../../shared/types';
 	import { getLobbyStartState } from '../client/lobby';
 
 	let {
@@ -21,7 +23,7 @@
 		localPlayerId: string;
 		onReady: (ready: boolean) => void;
 		onStart: () => void;
-		onAddComputer: () => void;
+		onAddComputer: (difficulty: ComputerDifficulty) => void;
 		onRemoveComputer: (playerId: string) => void;
 		onLeave: () => void;
 		error?: string;
@@ -30,6 +32,10 @@
 	} = $props();
 	let copied = $state(false);
 	let copyError = $state('');
+	let selectedComputerDifficulty = $state<ComputerDifficulty>('legendary');
+
+	const difficultyLabel = (difficulty: ComputerDifficulty): string =>
+		difficulty[0]!.toUpperCase() + difficulty.slice(1);
 
 	const local = $derived(
 		snapshot.players.find((player) => player.playerId === localPlayerId),
@@ -101,7 +107,7 @@
 					<strong>{player.displayName}</strong>
 					<span
 						>{player.playerType === 'computer'
-							? 'Computer'
+							? `Computer · ${difficultyLabel(player.computerDifficulty ?? 'legendary')}`
 							: player.isHost
 								? 'Host'
 								: 'Player'} · {player.connected
@@ -128,7 +134,19 @@
 			</button>
 		{/if}
 		{#if local?.isHost}
-			<button type="button" disabled={!canAddComputer} onclick={onAddComputer}>
+			<label class="difficulty-picker">
+				<span>Computer level</span>
+				<select bind:value={selectedComputerDifficulty}>
+					{#each COMPUTER_DIFFICULTIES as difficulty}
+						<option value={difficulty}>{difficultyLabel(difficulty)}</option>
+					{/each}
+				</select>
+			</label>
+			<button
+				type="button"
+				disabled={!canAddComputer}
+				onclick={() => onAddComputer(selectedComputerDifficulty)}
+			>
 				Add computer
 			</button>
 			<button type="button" disabled={!canStart} onclick={onStart}
@@ -219,6 +237,26 @@
 		font: inherit;
 		font-weight: 800;
 		cursor: pointer;
+	}
+	.difficulty-picker {
+		display: grid;
+		gap: 0.25rem;
+		color: #aaa5c0;
+		font-size: 0.72rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+	.difficulty-picker select {
+		padding: 0.7rem 2rem 0.7rem 0.75rem;
+		border: 1px solid #68627e;
+		border-radius: 0.5rem;
+		background: #242039;
+		color: #f4f1ff;
+		font: inherit;
+		font-weight: 600;
+		letter-spacing: normal;
+		text-transform: none;
 	}
 	button.secondary {
 		background: #9b8cff;
