@@ -15,6 +15,10 @@ test('two browser contexts complete a synchronized match and return to lobby', a
 
 	try {
 		await hostPage.goto('/');
+		await hostPage.getByRole('button', { name: 'Create room' }).click();
+		await expect(
+			hostPage.getByRole('heading', { name: 'Create your room' }),
+		).toBeVisible();
 		await hostPage.getByLabel('Display name').fill('Alice');
 		await hostPage.getByRole('button', { name: 'Create room' }).click();
 		await expect(hostPage.getByRole('heading', { name: /Room/ })).toBeVisible();
@@ -23,9 +27,13 @@ test('two browser contexts complete a synchronized match and return to lobby', a
 		const code = roomCode?.replace('Room ', '').trim();
 		if (code === undefined) throw new Error('Room code was not rendered');
 
-		await guestPage.goto(`/room/${code}`);
-		await guestPage.getByLabel('Display name').fill('Bob');
+		await guestPage.goto('/');
 		await guestPage.getByLabel('Room code').fill(code);
+		await guestPage.getByRole('button', { name: 'Join room' }).click();
+		await expect(
+			guestPage.getByRole('heading', { name: `Join room ${code}` }),
+		).toBeVisible();
+		await guestPage.getByLabel('Display name').fill('Bob');
 		await guestPage.getByRole('button', { name: 'Join room' }).click();
 		await expect(guestPage.getByText('Waiting room')).toBeVisible();
 		await expect(hostPage.getByText('Bob')).toBeVisible();
@@ -107,10 +115,28 @@ test('two browser contexts complete a synchronized match and return to lobby', a
 	}
 });
 
+test('create flow keeps the name step for returning players', async ({
+	page,
+}) => {
+	await page.goto('/');
+	await page.evaluate(() => {
+		localStorage.setItem('tet-multi:display-name', 'Saved player');
+	});
+	await page.getByRole('button', { name: 'Create room' }).click();
+	await expect(
+		page.getByRole('heading', { name: 'Create your room' }),
+	).toBeVisible();
+	await expect(page.getByLabel('Display name')).toHaveValue('Saved player');
+	await page.getByLabel('Display name').fill('New player');
+	await page.getByRole('button', { name: 'Create room' }).click();
+	await expect(page.getByText('Waiting room')).toBeVisible();
+});
+
 test('a host can start a match against four computer players', async ({
 	page,
 }) => {
 	await page.goto('/');
+	await page.getByRole('button', { name: 'Create room' }).click();
 	await page.getByLabel('Display name').fill('Alice');
 	await page.getByRole('button', { name: 'Create room' }).click();
 	await expect(page.getByText('Waiting room')).toBeVisible();
@@ -144,6 +170,7 @@ test('a touch-enabled client can swipe the local board', async ({
 
 	try {
 		await page.goto('/');
+		await page.getByRole('button', { name: 'Create room' }).click();
 		await page.getByLabel('Display name').fill('Touch player');
 		await page.getByRole('button', { name: 'Create room' }).click();
 		await expect(page.getByText('Waiting room')).toBeVisible();

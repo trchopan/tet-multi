@@ -11,6 +11,7 @@ const viewports = [
 
 const createRoom = async (page: Page, displayName: string): Promise<string> => {
 	await page.goto('/');
+	await page.getByRole('button', { name: 'Create room' }).click();
 	await page.getByLabel('Display name').fill(displayName);
 	await page.getByRole('button', { name: 'Create room' }).click();
 	await expect(page.getByText('Waiting room')).toBeVisible();
@@ -28,7 +29,6 @@ const joinRoom = async (
 ): Promise<void> => {
 	await page.goto(`/room/${roomCode}`);
 	await page.getByLabel('Display name').fill(displayName);
-	await page.getByLabel('Room code').fill(roomCode);
 	await page.getByRole('button', { name: 'Join room' }).click();
 	await expect(page.getByText('Waiting room')).toBeVisible();
 };

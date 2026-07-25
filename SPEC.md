@@ -77,17 +77,19 @@ The game may use familiar falling-block mechanics, but all visual assets, names,
 ### 5.1 Create a room
 
 1. The user opens the root page.
-2. The user enters a display name containing 1–20 visible characters.
-3. The user selects **Create room**.
-4. The server creates a room with a six-character code.
-5. The creator becomes the room host.
-6. The browser navigates to `/room/{ROOM_CODE}`.
-7. The lobby displays a copyable invite URL.
+2. The user selects **Create room**.
+3. The browser navigates to a room entry page.
+4. The user enters a display name containing 1–20 visible characters.
+5. The client opens `/ws` and sends a `create_room` message.
+6. The server creates a room with a six-character code.
+7. The creator becomes the room host.
+8. The browser navigates to `/room/{ROOM_CODE}`.
+9. The lobby displays a copyable invite URL.
 
 ### 5.2 Join a room
 
 1. The user opens an invite URL or enters a room code on the home page.
-2. The user enters a display name.
+2. The room entry page asks the user for a display name.
 3. The client opens `/ws` and sends a `join_room` message.
 4. The server either accepts the player or returns a structured error.
 5. The player appears in the lobby.
@@ -995,6 +997,10 @@ Development may use Vite for the frontend and Bun watch mode for the server, but
 - Room-code input and **Join room** button.
 - Keyboard-control summary.
 - Inline validation and server errors.
+
+Creating or joining a room navigates to a room entry page where the user enters
+their display name before the room request is sent. A direct invite URL must not
+send a new user back to the home page.
 
 ### 22.2 Lobby
 

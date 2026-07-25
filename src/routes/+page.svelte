@@ -1,21 +1,11 @@
 <script lang="ts">
 	import HomeForm from '../lib/components/HomeForm.svelte';
-	import {
-		MultiplayerSession,
-		saveDisplayName,
-	} from '../lib/client/multiplayer-session.svelte';
 
-	const session = new MultiplayerSession((roomCode) => {
-		globalThis.location.href = `/room/${roomCode}`;
-	});
-
-	const create = (displayName: string): void => {
-		saveDisplayName(displayName);
-		session.createRoom(displayName);
+	const create = (): void => {
+		globalThis.location.href = '/room/new';
 	};
-	const join = (displayName: string, roomCode: string): void => {
-		saveDisplayName(displayName);
-		session.joinRoom(roomCode, displayName);
+	const join = (roomCode: string): void => {
+		globalThis.location.href = `/room/${roomCode}`;
 	};
 </script>
 
@@ -29,7 +19,6 @@
 
 <main>
 	<HomeForm onCreate={create} onJoin={join} />
-	<p class="status" aria-live="polite">{session.error}</p>
 	<footer class="project-links" aria-label="Project links">
 		<a href="https://tet.chop.dev">tet.chop.dev</a>
 		<a href="https://github.com/trchopan/tet-multi">GitHub</a>
@@ -52,13 +41,6 @@
 		place-items: center;
 		padding: 1rem;
 		background: radial-gradient(circle at 50% 0%, #292341, #10121c 60%);
-	}
-	.status {
-		position: fixed;
-		right: 1rem;
-		bottom: 1rem;
-		max-width: 24rem;
-		color: #ff9f9f;
 	}
 	.project-links {
 		position: fixed;
