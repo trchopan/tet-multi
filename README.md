@@ -125,7 +125,7 @@ docker compose up -d --build
   and the production Bun handler so `/health` works in either mode. The Bun
   handler is authoritative in production.
 - Protocol contracts use Valibot schemas shared by the Bun server and browser
-  client. Protocol version `1`, the 16 KiB inbound message limit, and the error
+  client. Protocol version `2`, the 16 KiB inbound message limit, and the error
   code union are stable wire-contract values.
 - Room codes are normalized to uppercase and display names are trimmed at the
   protocol boundary. Protocol timestamps use Unix epoch milliseconds, while
@@ -181,14 +181,16 @@ docker compose up -d --build
   interpolate between recent snapshots and snap for discrete events. Ping/pong
   samples provide informational latency and lowest-RTT clock-offset estimates.
 - Computer players are server-owned lobby participants. The host can add up to
-  four computers, counted within the five-player room capacity, and remove them
-  before starting a match. Their deterministic rule-based controller evaluates
-  legal placements on cloned engine states, uses a bounded next-piece lookahead
-  with hold evaluation, and submits human-paced actions through the same
-  authoritative room input queue. Reaction and action delays use fixed-tick,
-  deterministic variation with per-match phase offsets; stale plans are
-  discarded if gravity locks a piece or an action is rejected before the plan
-  completes.
+  four computers, counted within the five-player room capacity, and choose a
+  difficulty independently for each one before starting a match. `Beginner`
+  reacts slowly and uses broad immediate-board placement choices without hold
+  or lookahead. `Challenger` uses medium pacing and hold evaluation without
+  lookahead. `Legendary` preserves the strongest current controller with
+  bounded next-piece lookahead and the existing action cadence. Every level
+  evaluates cloned engine states and submits deterministic actions through the
+  same authoritative room input queue. Reaction and action delays use fixed
+  ticks with per-match phase offsets; stale plans are discarded if gravity
+  locks a piece or an action is rejected before the plan completes.
 - Active matches use a viewport-sized `100dvh` shell. The local board scales from
   available height, while mobile keeps opponent boards behind the existing toggle
   so the playable board and controls remain visible without page scrolling.

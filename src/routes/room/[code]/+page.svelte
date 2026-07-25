@@ -10,7 +10,7 @@
 		MultiplayerSession,
 		saveDisplayName,
 	} from '../../../lib/client/multiplayer-session.svelte';
-	import type { InputAction } from '../../../shared/types';
+	import type { ComputerDifficulty, InputAction } from '../../../shared/types';
 	import { page } from '$app/state';
 
 	const code = $derived(page.params.code?.toUpperCase() ?? '');
@@ -87,7 +87,8 @@
 			localPlayerId={session.playerId}
 			onReady={(ready) => session.setReady(ready)}
 			onStart={() => session.startMatch()}
-			onAddComputer={() => session.addComputer()}
+			onAddComputer={(difficulty: ComputerDifficulty) =>
+				session.addComputer(difficulty)}
 			onRemoveComputer={(playerId) => session.removeComputer(playerId)}
 			onLeave={() => session.leaveRoom()}
 			error={session.error}

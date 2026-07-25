@@ -1,11 +1,14 @@
 import {
+	DEFAULT_COMPUTER_DIFFICULTY,
 	MAX_PLAYERS_PER_ROOM,
 	MAX_COMPUTER_PLAYERS_PER_ROOM,
 	MAX_GAMEPLAY_INPUTS_PER_SECOND,
 	GAMEPLAY_INPUT_BURST,
 	MIN_PLAYERS_TO_START,
 	NORMAL_SNAPSHOT_INTERVAL_TICKS,
+	PROTOCOL_VERSION,
 } from '../shared/constants';
+import type { ComputerDifficulty } from '../shared/types';
 import {
 	applyInput,
 	advanceTicks,
@@ -186,7 +189,11 @@ export class Room {
 		return { session, result: { ok: true } };
 	}
 
-	addComputer(playerId: string, now = this.now()): Session {
+	addComputer(
+		playerId: string,
+		difficulty: ComputerDifficulty = DEFAULT_COMPUTER_DIFFICULTY,
+		now = this.now(),
+	): Session {
 		this.requireHost(playerId);
 		if (this.phase !== 'lobby') throw new RoomError('INVALID_PHASE');
 		if (this.sessions.size >= MAX_PLAYERS_PER_ROOM)
@@ -198,6 +205,7 @@ export class Room {
 			displayName: `CPU ${this.computerCount + 1}`,
 			roomCode: this.code,
 			joinedAt: now,
+			difficulty,
 		});
 		this.sessions.set(computer.playerId, computer);
 		this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot(now) });
@@ -329,7 +337,11 @@ export class Room {
 				if (session.playerType === 'computer')
 					this.botControllers.set(
 						session.playerId,
-						createBotController(this.matchSeed, rosterIndex),
+						createBotController(
+							this.matchSeed,
+							rosterIndex,
+							session.computerDifficulty,
+						),
 					);
 			}
 			this.broadcast({
@@ -389,7 +401,7 @@ export class Room {
 
 	snapshot(serverTime = this.now()): RoomSnapshot {
 		const snapshot: RoomSnapshot = {
-			protocolVersion: 1,
+			protocolVersion: PROTOCOL_VERSION,
 			roomCode: this.code,
 			phase: this.phase,
 			hostPlayerId: this.hostPlayerId,
@@ -556,6 +568,9 @@ export class Room {
 			displayName: session.displayName,
 			shortId: session.playerId.slice(0, 6),
 			playerType: session.playerType,
+			...(session.computerDifficulty === undefined
+				? {}
+				: { computerDifficulty: session.computerDifficulty }),
 			joinedAt: session.joinedAt,
 			connected: session.connected,
 			ready: session.ready,

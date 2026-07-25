@@ -5,15 +5,63 @@ import {
 } from '../game/engine';
 import { getRotationCells, type PieceRotation } from '../game/pieces';
 import { canPlacePiece } from '../game/board';
-import type { InputAction } from '../shared/types';
+import { DEFAULT_COMPUTER_DIFFICULTY } from '../shared/constants';
+import type { ComputerDifficulty, InputAction } from '../shared/types';
 
-const MIN_REACTION_TICKS = 18;
-const REACTION_VARIATION_TICKS = 6;
-const ACTION_INTERVAL_TICKS = 3;
-const GROUNDED_REACTION_TICKS = 3;
-const LOOKAHEAD_BEAM_WIDTH = 1;
-const NEAR_BEST_CANDIDATE_COUNT = 3;
-const NEAR_BEST_SCORE_MARGIN = 20;
+interface BotProfile {
+	minimumReactionTicks: number;
+	reactionVariationTicks: number;
+	actionIntervalTicks: number;
+	groundedReactionTicks: number;
+	lookaheadBeamWidth: number;
+	nearBestCandidateCount: number;
+	nearBestScoreMargin: number;
+	lookaheadWeight: number;
+	allowHold: boolean;
+}
+
+const BOT_PROFILES: Readonly<Record<ComputerDifficulty, BotProfile>> = {
+	beginner: {
+		minimumReactionTicks: 45,
+		reactionVariationTicks: 15,
+		actionIntervalTicks: 6,
+		groundedReactionTicks: 8,
+		lookaheadBeamWidth: 12,
+		nearBestCandidateCount: 8,
+		nearBestScoreMargin: 500,
+		lookaheadWeight: 0,
+		allowHold: false,
+	},
+	challenger: {
+		minimumReactionTicks: 30,
+		reactionVariationTicks: 9,
+		actionIntervalTicks: 4,
+		groundedReactionTicks: 5,
+		lookaheadBeamWidth: 4,
+		nearBestCandidateCount: 3,
+		nearBestScoreMargin: 100,
+		lookaheadWeight: 0,
+		allowHold: true,
+	},
+	legendary: {
+		minimumReactionTicks: 18,
+		reactionVariationTicks: 6,
+		actionIntervalTicks: 3,
+		groundedReactionTicks: 3,
+		lookaheadBeamWidth: 1,
+		nearBestCandidateCount: 3,
+		nearBestScoreMargin: 20,
+		lookaheadWeight: 0.7,
+		allowHold: true,
+	},
+};
+
+const profileFor = (difficulty: ComputerDifficulty): BotProfile => {
+	const profile = BOT_PROFILES[difficulty];
+	if (profile === undefined)
+		throw new Error(`Unknown bot difficulty: ${difficulty}`);
+	return profile;
+};
 
 interface RotationPath {
 	rotationDelta: PieceRotation;
@@ -46,6 +94,7 @@ interface PlannedPlacement {
 }
 
 export interface BotController {
+	difficulty: ComputerDifficulty;
 	plan: InputAction[];
 	cooldown: number;
 	actionCooldown: number;
@@ -63,16 +112,22 @@ const phaseOffset = (seed: string, rosterIndex: number): number => {
 export const createBotController = (
 	matchSeed = '',
 	rosterIndex = 0,
-): BotController => ({
-	plan: [],
-	cooldown:
-		MIN_REACTION_TICKS +
-		(matchSeed === ''
-			? 0
-			: (phaseOffset(matchSeed, rosterIndex) % 4) * REACTION_VARIATION_TICKS),
-	actionCooldown: 0,
-	decisionCount: 0,
-});
+	difficulty: ComputerDifficulty = DEFAULT_COMPUTER_DIFFICULTY,
+): BotController => {
+	const profile = profileFor(difficulty);
+	return {
+		difficulty,
+		plan: [],
+		cooldown:
+			profile.minimumReactionTicks +
+			(matchSeed === ''
+				? 0
+				: (phaseOffset(matchSeed, rosterIndex) % 4) *
+					profile.reactionVariationTicks),
+		actionCooldown: 0,
+		decisionCount: 0,
+	};
+};
 
 export const invalidateBotPlan = (controller: BotController): void => {
 	controller.plan = [];
@@ -248,50 +303,61 @@ const enumerateCandidates = (
 	return candidates;
 };
 
-const scoreCandidate = (candidate: PlacementCandidate): number => {
+const scoreCandidateFor = (
+	candidate: PlacementCandidate,
+	lookaheadWeight: number,
+): number => {
+	if (lookaheadWeight === 0) return candidate.score;
 	const nextCandidates = enumerateCandidates(candidate.after, false);
 	const bestNext = nextCandidates.reduce(
 		(best, next) => Math.max(best, next.score),
 		Number.NEGATIVE_INFINITY,
 	);
-	return candidate.score + (Number.isFinite(bestNext) ? bestNext * 0.7 : 0);
+	return (
+		candidate.score +
+		(Number.isFinite(bestNext) ? bestNext * lookaheadWeight : 0)
+	);
 };
 
 const createPlan = (
 	state: GameEngineState,
 	decisionCount: number,
+	profile: BotProfile,
 ): PlannedPlacement => {
-	const candidates = enumerateCandidates(state, true);
+	const candidates = enumerateCandidates(state, profile.allowHold);
 	if (candidates.length === 0)
 		return { actions: ['hard_drop'], pieceKey: pieceKey(state) };
 
 	const immediate = [...candidates].sort(
 		(first, second) => second.score - first.score,
 	);
-	const beam = immediate.slice(0, LOOKAHEAD_BEAM_WIDTH);
-	for (const candidate of beam) candidate.score = scoreCandidate(candidate);
+	const beam = immediate.slice(0, profile.lookaheadBeamWidth);
+	for (const candidate of beam)
+		candidate.score = scoreCandidateFor(candidate, profile.lookaheadWeight);
 	beam.sort((first, second) => second.score - first.score);
 	const bestScore = beam[0]?.score ?? Number.NEGATIVE_INFINITY;
 	const nearBest = beam.filter(
-		(candidate) => candidate.score >= bestScore - NEAR_BEST_SCORE_MARGIN,
+		(candidate) => candidate.score >= bestScore - profile.nearBestScoreMargin,
 	);
 	const selected =
 		nearBest[
-			decisionCount % Math.min(NEAR_BEST_CANDIDATE_COUNT, nearBest.length)
+			decisionCount % Math.min(profile.nearBestCandidateCount, nearBest.length)
 		] ?? beam[0];
 	if (selected === undefined)
 		return { actions: ['hard_drop'], pieceKey: pieceKey(state) };
 	return { actions: selected.actions, pieceKey: selected.pieceKey };
 };
 
-const reactionDelay = (decisionCount: number): number =>
-	MIN_REACTION_TICKS + (decisionCount % 4) * REACTION_VARIATION_TICKS;
+const reactionDelay = (decisionCount: number, profile: BotProfile): number =>
+	profile.minimumReactionTicks +
+	(decisionCount % 4) * profile.reactionVariationTicks;
 
 export const nextBotAction = (
 	controller: BotController,
 	state: GameEngineState,
 ): InputAction | undefined => {
 	if (state.gameOver) return undefined;
+	const profile = profileFor(controller.difficulty);
 
 	if (
 		controller.plan.length > 0 &&
@@ -305,13 +371,13 @@ export const nextBotAction = (
 		if (isGrounded(state))
 			controller.cooldown = Math.min(
 				controller.cooldown,
-				GROUNDED_REACTION_TICKS,
+				profile.groundedReactionTicks,
 			);
 		if (controller.cooldown > 0) {
 			controller.cooldown -= 1;
 			return undefined;
 		}
-		const planned = createPlan(state, controller.decisionCount);
+		const planned = createPlan(state, controller.decisionCount, profile);
 		controller.plan = planned.actions;
 		controller.plannedPieceKey = planned.pieceKey;
 		controller.decisionCount += 1;
@@ -325,9 +391,9 @@ export const nextBotAction = (
 	const action = controller.plan.shift();
 	if (action === undefined) return undefined;
 	if (controller.plan.length === 0) {
-		controller.cooldown = reactionDelay(controller.decisionCount);
+		controller.cooldown = reactionDelay(controller.decisionCount, profile);
 		controller.actionCooldown = 0;
 		delete controller.plannedPieceKey;
-	} else controller.actionCooldown = ACTION_INTERVAL_TICKS - 1;
+	} else controller.actionCooldown = profile.actionIntervalTicks - 1;
 	return action;
 };

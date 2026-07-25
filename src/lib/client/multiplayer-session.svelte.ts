@@ -1,5 +1,6 @@
 import { PROTOCOL_VERSION } from '../../shared/constants';
 import type {
+	ComputerDifficulty,
 	ClientMessage,
 	InputAction,
 	PlayerSnapshot,
@@ -114,8 +115,8 @@ export class MultiplayerSession {
 		this.send({ type: 'start_match' });
 	}
 
-	public addComputer(): void {
-		this.send({ type: 'add_computer' });
+	public addComputer(difficulty: ComputerDifficulty): void {
+		this.send({ type: 'add_computer', difficulty });
 	}
 
 	public removeComputer(playerId: string): void {

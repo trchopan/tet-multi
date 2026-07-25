@@ -1,4 +1,5 @@
 import { decodeClientMessage } from '../shared/protocol';
+import { PROTOCOL_VERSION } from '../shared/constants';
 import type { ClientMessage, ErrorCode, ServerMessage } from '../shared/types';
 import { errorMessage, roomErrorMessage, RoomManager } from './room-manager';
 import type { Session, SocketLike } from './session';
@@ -118,7 +119,7 @@ export const createWebSocketHandlers = (
 				socket.data.clientId = message.clientId;
 				send(socket, {
 					type: 'hello_ack',
-					protocolVersion: 1,
+					protocolVersion: PROTOCOL_VERSION,
 					serverTime: Date.now(),
 				});
 				return;
@@ -260,7 +261,7 @@ const dispatch = (
 			room.start(session.playerId);
 			break;
 		case 'add_computer':
-			room.addComputer(session.playerId);
+			room.addComputer(session.playerId, message.difficulty);
 			break;
 		case 'remove_computer':
 			room.removeComputer(session.playerId, message.playerId);

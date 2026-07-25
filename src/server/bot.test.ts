@@ -24,6 +24,85 @@ const collectActions = (seed: string): string[] => {
 };
 
 describe('computer player policy', () => {
+	test('uses slower deterministic timing for lower difficulty levels', () => {
+		const firstActionTick = (
+			difficulty: 'beginner' | 'challenger' | 'legendary',
+		) => {
+			const engine = createEngineState('bot-seed', 0);
+			const controller = createBotController('', 0, difficulty);
+			for (let tick = 0; tick < 100; tick += 1) {
+				if (nextBotAction(controller, engine) !== undefined) return tick;
+				advanceTicks(engine, 1, false);
+			}
+			return -1;
+		};
+
+		expect(firstActionTick('beginner')).toBeGreaterThan(
+			firstActionTick('challenger'),
+		);
+		expect(firstActionTick('challenger')).toBeGreaterThan(
+			firstActionTick('legendary'),
+		);
+	});
+
+	test('replays every difficulty deterministically with applied actions', () => {
+		for (const difficulty of ['beginner', 'challenger', 'legendary'] as const) {
+			const run = (): { actions: string[]; hash: string } => {
+				const engine = createEngineState('difficulty-seed', 0);
+				const controller = createBotController(
+					'difficulty-match',
+					1,
+					difficulty,
+				);
+				const actions: string[] = [];
+				for (let tick = 0; tick < 160; tick += 1) {
+					const action = nextBotAction(controller, engine);
+					if (action !== undefined) {
+						actions.push(`${tick}:${action}`);
+						applyInput(engine, action, false);
+					}
+					advanceTicks(engine, 1, false);
+				}
+				return { actions, hash: hashEngineState(engine) };
+			};
+
+			expect(run()).toEqual(run());
+		}
+	});
+
+	test('keeps deterministic difficulty outcomes ordered across fixed seeds', () => {
+		const metrics = (difficulty: 'beginner' | 'challenger' | 'legendary') => {
+			let hardDrops = 0;
+			let lines = 0;
+			for (let seedIndex = 0; seedIndex < 5; seedIndex += 1) {
+				const engine = createEngineState(`calibration-${seedIndex}`, 0);
+				const controller = createBotController(
+					'calibration-match',
+					seedIndex,
+					difficulty,
+				);
+				for (let tick = 0; tick < 1800 && !engine.gameOver; tick += 1) {
+					const action = nextBotAction(controller, engine);
+					if (action !== undefined) {
+						applyInput(engine, action, false);
+						if (action === 'hard_drop') hardDrops += 1;
+					}
+					advanceTicks(engine, 1, false);
+				}
+				lines += engine.lines;
+			}
+			return { hardDrops, lines };
+		};
+
+		const beginner = metrics('beginner');
+		const challenger = metrics('challenger');
+		const legendary = metrics('legendary');
+		expect(beginner.hardDrops).toBeLessThan(challenger.hardDrops);
+		expect(challenger.hardDrops).toBeLessThan(legendary.hardDrops);
+		expect(beginner.lines).toBeLessThan(challenger.lines);
+		expect(challenger.lines).toBeLessThan(legendary.lines);
+	});
+
 	test('paces actions at a human-like fixed-tick cadence', () => {
 		const engine = createEngineState('bot-seed', 0);
 		const controller = createBotController();
@@ -161,23 +240,5 @@ describe('computer player policy', () => {
 		}
 		expect(engine.gameOver).toBe(false);
 		expect(hardDrops).toBeGreaterThanOrEqual(15);
-	});
-
-	test('replays the complete bot simulation deterministically', () => {
-		const run = (): { actions: string[]; hash: string } => {
-			const engine = createEngineState('bot-replay-seed', 0);
-			const controller = createBotController('bot-replay-match', 1);
-			const actions: string[] = [];
-			for (let tick = 0; tick < 1800 && !engine.gameOver; tick += 1) {
-				const action = nextBotAction(controller, engine);
-				if (action !== undefined) {
-					actions.push(`${tick}:${action}`);
-					applyInput(engine, action, false);
-				}
-				advanceTicks(engine, 1, false);
-			}
-			return { actions, hash: hashEngineState(engine) };
-		};
-		expect(run()).toEqual(run());
 	});
 });

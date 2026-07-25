@@ -1,5 +1,6 @@
 import type {
 	ERROR_CODES,
+	COMPUTER_DIFFICULTIES,
 	INPUT_ACTIONS,
 	PLAYER_MATCH_STATES,
 	PIECE_KINDS,
@@ -12,10 +13,11 @@ export type RoomPhase = (typeof ROOM_PHASES)[number];
 export type PlayerMatchState = (typeof PLAYER_MATCH_STATES)[number];
 export type ErrorCode = (typeof ERROR_CODES)[number];
 export type PlayerType = 'human' | 'computer';
+export type ComputerDifficulty = (typeof COMPUTER_DIFFICULTIES)[number];
 
 export interface ClientHelloMessage {
 	type: 'hello';
-	protocolVersion: 1;
+	protocolVersion: 2;
 	clientId: string;
 }
 
@@ -44,6 +46,7 @@ export interface ClientStartMatchMessage {
 
 export interface ClientAddComputerMessage {
 	type: 'add_computer';
+	difficulty: ComputerDifficulty;
 }
 
 export interface ClientRemoveComputerMessage {
@@ -97,6 +100,7 @@ export interface PlayerSnapshot {
 	displayName: string;
 	shortId: string;
 	playerType: PlayerType;
+	computerDifficulty?: ComputerDifficulty;
 	joinedAt: number;
 	connected: boolean;
 	ready: boolean;
@@ -120,7 +124,7 @@ export interface PlayerSnapshot {
 }
 
 export interface RoomSnapshot {
-	protocolVersion: 1;
+	protocolVersion: 2;
 	roomCode: string;
 	phase: RoomPhase;
 	hostPlayerId: string;
@@ -134,7 +138,7 @@ export interface RoomSnapshot {
 
 export interface ServerHelloAckMessage {
 	type: 'hello_ack';
-	protocolVersion: 1;
+	protocolVersion: 2;
 	serverTime: number;
 }
 

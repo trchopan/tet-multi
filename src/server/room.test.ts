@@ -124,7 +124,36 @@ describe('room lifecycle', () => {
 		).toBe(true);
 		expect(computers.every((computer) => computer.ready)).toBe(true);
 		expect(room.computerCount).toBe(4);
+		expect(computers[0]?.computerDifficulty).toBe('legendary');
 		expect(() => room.addComputer(host.playerId)).toThrow('ROOM_FULL');
+	});
+
+	test('stores the selected computer difficulty in the session and snapshot', () => {
+		const room = new Room({
+			code: 'ABC234',
+			createId: ids,
+			createToken: ids,
+		});
+		const host = room.join('human', 'Alice', new FakeSocket(), 0).session!;
+		const computer = room.addComputer(host.playerId, 'beginner', 0);
+
+		expect(computer.computerDifficulty).toBe('beginner');
+		expect(
+			room
+				.snapshot()
+				.players.find((player) => player.playerId === computer.playerId)
+				?.computerDifficulty,
+		).toBe('beginner');
+		room.setReady(host.playerId, true);
+		room.setReady(computer.playerId, true);
+		room.start(host.playerId, 0);
+		room.update(3000);
+		const controllers = (
+			room as unknown as {
+				botControllers: Map<string, { difficulty: string }>;
+			}
+		).botControllers;
+		expect(controllers.get(computer.playerId)?.difficulty).toBe('beginner');
 	});
 
 	test('only the host can add or remove computer players', () => {
@@ -161,7 +190,7 @@ describe('room lifecycle', () => {
 			createToken: ids,
 		});
 		const host = room.join('human', 'Alice', new FakeSocket(), 0).session!;
-		const computer = room.addComputer(host.playerId, 0);
+		const computer = room.addComputer(host.playerId, 'legendary', 0);
 		room.setReady(host.playerId, true);
 		room.start(host.playerId, now);
 		now = 3000;
@@ -194,7 +223,7 @@ describe('room lifecycle', () => {
 			createToken: ids,
 		});
 		const host = room.join('human', 'Alice', new FakeSocket(), 0).session!;
-		const computer = room.addComputer(host.playerId, 0);
+		const computer = room.addComputer(host.playerId, 'legendary', 0);
 		room.setReady(host.playerId, true);
 		room.start(host.playerId, now);
 		now = 3000;

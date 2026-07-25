@@ -24,7 +24,7 @@ const validClientMessages = [
 	},
 	{ type: 'set_ready', ready: true },
 	{ type: 'start_match' },
-	{ type: 'add_computer' },
+	{ type: 'add_computer', difficulty: 'legendary' },
 	{ type: 'remove_computer', playerId: 'computer-1' },
 	{ type: 'input', matchId: 'match-1', sequence: 1, action: 'move_left' },
 	{ type: 'return_to_lobby' },
@@ -62,6 +62,21 @@ describe('shared protocol', () => {
 			const result = decodeClientMessage(JSON.stringify(message));
 			expect(result.success).toBe(true);
 		}
+	});
+
+	test('accepts all computer difficulty levels and rejects unknown levels', () => {
+		for (const difficulty of ['beginner', 'challenger', 'legendary']) {
+			expect(
+				decodeClientMessage(
+					JSON.stringify({ type: 'add_computer', difficulty }),
+				).success,
+			).toBe(true);
+		}
+		expect(
+			decodeClientMessage(
+				JSON.stringify({ type: 'add_computer', difficulty: 'expert' }),
+			).success,
+		).toBe(false);
 	});
 
 	test('normalizes names and room codes at the protocol boundary', () => {
@@ -108,6 +123,30 @@ describe('shared protocol', () => {
 			safeParse(RoomSnapshotSchema, {
 				...validSnapshot,
 				players: [legacyPlayer],
+			}).success,
+		).toBe(false);
+	});
+
+	test('requires difficulty metadata only for computer snapshot players', () => {
+		const player = validSnapshot.players[0];
+		if (player === undefined) throw new Error('Snapshot fixture is empty');
+		const computer = { ...player, playerType: 'computer' as const };
+		expect(
+			safeParse(RoomSnapshotSchema, {
+				...validSnapshot,
+				players: [{ ...computer, computerDifficulty: 'beginner' }],
+			}).success,
+		).toBe(true);
+		expect(
+			safeParse(RoomSnapshotSchema, {
+				...validSnapshot,
+				players: [computer],
+			}).success,
+		).toBe(false);
+		expect(
+			safeParse(RoomSnapshotSchema, {
+				...validSnapshot,
+				players: [{ ...player, computerDifficulty: 'beginner' }],
 			}).success,
 		).toBe(false);
 	});

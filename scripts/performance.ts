@@ -45,7 +45,7 @@ for (let roomIndex = 0; roomIndex < ROOM_COUNT; roomIndex += 1) {
 		botIndex < MAX_COMPUTER_PLAYERS_PER_ROOM;
 		botIndex += 1
 	)
-		room.addComputer(host.playerId, 0);
+		room.addComputer(host.playerId, 'legendary', 0);
 	for (const player of room.players) room.setReady(player.playerId, true);
 	room.start(room.players[0]!.playerId, 0);
 	room.update(3000);
