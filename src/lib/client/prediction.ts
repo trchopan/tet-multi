@@ -3,7 +3,10 @@ import {
 	createEngineState,
 	type GameEngineState,
 } from '../../games/falling-blocks/core-engine';
-import { serializeBoard, type BoardCell } from '../../games/falling-blocks/board';
+import {
+	serializeBoard,
+	type BoardCell,
+} from '../../games/falling-blocks/board';
 import type { InputAction, PlayerSnapshot } from '../../shared/types';
 
 export interface PendingInput {

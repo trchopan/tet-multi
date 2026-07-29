@@ -83,10 +83,7 @@ export class FallingBlocksGameEngine implements GameEngine<
 			inputsByPlayer.set(env.playerId, arr);
 			this.lastProcessedInput.set(
 				env.playerId,
-				Math.max(
-					this.lastProcessedInput.get(env.playerId) ?? 0,
-					env.sequence,
-				),
+				Math.max(this.lastProcessedInput.get(env.playerId) ?? 0, env.sequence),
 			);
 		}
 
@@ -273,8 +270,7 @@ export class FallingBlocksGameEngine implements GameEngine<
 						(acc, p) => acc + p.lines,
 						0,
 					),
-					lastProcessedInput:
-						this.lastProcessedInput.get(player.playerId) ?? 0,
+					lastProcessedInput: this.lastProcessedInput.get(player.playerId) ?? 0,
 				});
 			} else {
 				summaries.set(player.playerId, {

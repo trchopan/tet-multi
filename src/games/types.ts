@@ -1,4 +1,8 @@
-import type { ComputerDifficulty, PlayerSnapshot, RoomSnapshot } from '../shared/types';
+import type {
+	ComputerDifficulty,
+	PlayerSnapshot,
+	RoomSnapshot,
+} from '../shared/types';
 
 export type ViewMode = 'per-player-card' | 'shared-canvas' | 'hybrid-table';
 

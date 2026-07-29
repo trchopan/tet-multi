@@ -10,6 +10,7 @@ export interface SnakePlayerState {
 	playerId: string;
 	displayName: string;
 	body: Position[];
+	levels: number[];
 	direction: SnakeDirection;
 	nextDirection: SnakeDirection;
 	score: number;
@@ -27,6 +28,7 @@ export interface SnakeGameState {
 		string,
 		{
 			body: Position[];
+			levels?: number[];
 			direction: SnakeDirection;
 			score: number;
 			matchState: 'playing' | 'eliminated';
