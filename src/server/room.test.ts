@@ -4,7 +4,7 @@ import { Room } from './room';
 import { RoomManager } from './room-manager';
 import type { SocketLike } from './session';
 import { validateServerMessage } from '../shared/protocol';
-import type { GameEngineState } from '../game/engine';
+import type { GameEngineState } from '../games/falling-blocks/core-engine';
 import { reconnectTokensEqual } from './session';
 
 class FakeSocket implements SocketLike {
@@ -242,7 +242,7 @@ describe('room lifecycle', () => {
 			throw new Error('Computer internals were not initialized');
 		engine.board.cells.fill(0);
 		engine.activePiece = { kind: 'I', x: 0, y: 0, rotation: 0 };
-		controller.plan = ['move_left'];
+		controller.plan = ['left'];
 		controller.cooldown = 0;
 		controller.actionCooldown = 0;
 
@@ -378,7 +378,7 @@ describe('room lifecycle', () => {
 				type: 'input',
 				matchId: first.snapshot().matchId!,
 				sequence: 1,
-				action: 'hard_drop',
+				action: 'button_a',
 			},
 			0,
 		);
@@ -388,7 +388,7 @@ describe('room lifecycle', () => {
 				type: 'input',
 				matchId: first.snapshot().matchId!,
 				sequence: 1,
-				action: 'hard_drop',
+				action: 'button_a',
 			},
 			0,
 		);
@@ -406,7 +406,7 @@ describe('room lifecycle', () => {
 				type: 'input',
 				matchId: second.snapshot().matchId!,
 				sequence: 1,
-				action: 'hard_drop',
+				action: 'button_a',
 			},
 			0,
 		);
@@ -484,7 +484,7 @@ describe('room lifecycle', () => {
 				type: 'input',
 				matchId: room.snapshot(now).matchId!,
 				sequence: 1,
-				action: 'hard_drop',
+				action: 'button_a',
 			},
 			now,
 		);

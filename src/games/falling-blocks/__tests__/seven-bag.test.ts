@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { PIECE_KINDS } from '../../shared/constants';
-import { createSevenBag, drawPiece } from '../random';
+import { PIECE_KINDS } from '../../../shared/constants';
+import { createSevenBag, drawPiece } from '../seven-bag';
 
 const draw = (seed: string, rosterIndex: number, count: number) => {
 	const bag = createSevenBag(seed, rosterIndex);

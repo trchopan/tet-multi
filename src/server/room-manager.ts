@@ -61,12 +61,14 @@ export class RoomManager {
 		clientId: string,
 		displayName: string,
 		socket: SocketLike,
+		gameType?: string,
 	): { room: Room; session: Session } {
 		if (!this.accepting) throw new Error('INTERNAL_ERROR');
 		let code = this.createCode();
 		while (this.rooms.has(code)) code = this.createCode();
 		const room = new Room({
 			code,
+			gameType: gameType ?? 'falling-blocks',
 			now: this.now,
 			createId: this.createId,
 			createSeed: this.createSeed,

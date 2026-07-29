@@ -13,8 +13,8 @@ import {
 	holdPiece,
 	softDrop,
 	serializeEngineState,
-} from '../engine';
-import { BOARD_WIDTH } from '../../shared/constants';
+} from '../core-engine';
+import { BOARD_WIDTH } from '../../../shared/constants';
 import { setCell } from '../board';
 
 describe('deterministic engine foundation', () => {
@@ -22,10 +22,10 @@ describe('deterministic engine foundation', () => {
 		const first = createEngineState('replay-seed', 1);
 		const second = createEngineState('replay-seed', 1);
 		const inputs = [
-			'move_left',
-			'move_left',
-			'move_right',
-			'move_right',
+			'left',
+			'left',
+			'right',
+			'right',
 		] as const;
 		for (const input of inputs) {
 			applyHorizontalInput(first, input);
@@ -37,7 +37,7 @@ describe('deterministic engine foundation', () => {
 	test('different engine states produce different hashes', () => {
 		const state = createEngineState('hash-seed');
 		const initialHash = hashEngineState(state);
-		expect(applyHorizontalInput(state, 'move_right')).toBe(true);
+		expect(applyHorizontalInput(state, 'right')).toBe(true);
 		expect(hashEngineState(state)).not.toBe(initialHash);
 		expect(hashEngineState(createEngineState('other-hash-seed'))).not.toBe(
 			initialHash,
@@ -46,17 +46,17 @@ describe('deterministic engine foundation', () => {
 
 	test('horizontal movement stops at the wall', () => {
 		const state = createEngineState('movement-seed');
-		while (applyHorizontalInput(state, 'move_left')) {
+		while (applyHorizontalInput(state, 'left')) {
 			// Move until the active piece reaches its legal boundary.
 		}
 		const stoppedHash = hashEngineState(state);
-		expect(applyHorizontalInput(state, 'move_left')).toBe(false);
+		expect(applyHorizontalInput(state, 'left')).toBe(false);
 		expect(hashEngineState(state)).toBe(stoppedHash);
 	});
 
 	test('serialization round trips without changing the hash', () => {
 		const state = createEngineState('serialization-seed', 3);
-		applyHorizontalInput(state, 'move_right');
+		applyHorizontalInput(state, 'right');
 		const restored = deserializeEngineState(serializeEngineState(state));
 		expect(restored).toEqual(state);
 		expect(hashEngineState(restored)).toBe(hashEngineState(state));
@@ -180,14 +180,14 @@ describe('deterministic engine foundation', () => {
 			expect(
 				applyHorizontalInput(
 					state,
-					index % 2 === 0 ? 'move_left' : 'move_right',
+					index % 2 === 0 ? 'left' : 'right',
 				),
 			).toBe(true);
 		}
 		expect(state.groundedResets).toBe(15);
 		expect(state.lockMs).toBe(0);
 		state.lockMs = 400;
-		expect(applyHorizontalInput(state, 'move_left')).toBe(true);
+		expect(applyHorizontalInput(state, 'left')).toBe(true);
 		expect(state.lockMs).toBe(400);
 	});
 
@@ -240,13 +240,13 @@ describe('deterministic engine foundation', () => {
 		const first = createEngineState('known-replay', 2);
 		const second = createEngineState('known-replay', 2);
 		const inputs = [
-			'move_left',
-			'rotate_cw',
-			'soft_drop',
-			'move_right',
-			'rotate_ccw',
-			'hard_drop',
-			'hold',
+			'left',
+			'button_x',
+			'down',
+			'right',
+			'button_b',
+			'button_a',
+			'button_y',
 		] as const;
 		for (const input of inputs) {
 			applyInput(first, input);
@@ -259,4 +259,4 @@ describe('deterministic engine foundation', () => {
 });
 
 const moveLeft = (state: ReturnType<typeof createEngineState>): boolean =>
-	applyHorizontalInput(state, 'move_left');
+	applyHorizontalInput(state, 'left');

@@ -94,7 +94,11 @@
 <section class="lobby" aria-labelledby="lobby-title">
 	<header class="room-header">
 		<div class="room-heading">
-			<p class="eyebrow">Waiting room</p>
+			<p class="eyebrow">
+				Waiting room · {snapshot.gameType
+					? snapshot.gameType.toUpperCase()
+					: 'FALLING BLOCKS'}
+			</p>
 			<div class="title-row">
 				<h1 id="lobby-title">Room {snapshot.roomCode}</h1>
 				<p class="connection" role="status" aria-live="polite">

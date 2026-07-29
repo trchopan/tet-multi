@@ -25,6 +25,7 @@ export interface ClientCreateRoomMessage {
 	type: 'create_room';
 	requestId: string;
 	displayName: string;
+	gameType?: string | undefined;
 }
 
 export interface ClientJoinRoomMessage {
@@ -126,6 +127,8 @@ export interface PlayerSnapshot {
 export interface RoomSnapshot {
 	protocolVersion: 2;
 	roomCode: string;
+	gameType?: string | undefined;
+	customGameState?: unknown;
 	phase: RoomPhase;
 	hostPlayerId: string;
 	serverTick: number;

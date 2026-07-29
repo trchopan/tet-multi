@@ -4,8 +4,8 @@ import {
 	BOARD_WIDTH,
 	NEXT_PREVIEW_COUNT,
 	SNAPSHOT_CELL_VALUES,
-} from '../shared/constants';
-import type { InputAction, PieceKind } from '../shared/types';
+} from '../../shared/constants';
+import type { InputAction, PieceKind } from '../../shared/types';
 import {
 	canPlacePiece,
 	clearLines,
@@ -29,7 +29,7 @@ import {
 	createSevenBag,
 	drawPiece,
 	type SevenBagState,
-} from './random';
+} from './seven-bag';
 import { getPieceDefinition, isPieceKind, type PieceRotation } from './pieces';
 import { getKickTests } from './rotation';
 import { detectTSpin, scorePlacement, type PlacementScore } from './scoring';
@@ -207,8 +207,8 @@ export const applyRotation = (
 
 export const applyHorizontalInput = (
 	state: GameEngineState,
-	action: 'move_left' | 'move_right',
-): boolean => moveHorizontal(state, action === 'move_left' ? -1 : 1);
+	action: 'left' | 'right',
+): boolean => moveHorizontal(state, action === 'left' ? -1 : 1);
 
 const lockAndSpawn = (
 	state: GameEngineState,
@@ -345,20 +345,21 @@ export const applyInput = (
 	applyReadyGarbage = true,
 ): boolean => {
 	switch (action) {
-		case 'move_left':
+		case 'left':
 			return moveHorizontal(state, -1);
-		case 'move_right':
+		case 'right':
 			return moveHorizontal(state, 1);
-		case 'rotate_cw':
+		case 'button_x':
+		case 'up':
 			return applyRotation(state, true);
-		case 'rotate_ccw':
+		case 'button_b':
 			return applyRotation(state, false);
-		case 'soft_drop':
+		case 'down':
 			return softDrop(state);
-		case 'hard_drop':
+		case 'button_a':
 			hardDrop(state, applyReadyGarbage);
 			return true;
-		case 'hold':
+		case 'button_y':
 			return holdPiece(state);
 	}
 };

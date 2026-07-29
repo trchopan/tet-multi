@@ -3,8 +3,8 @@ import {
 	advanceTicks,
 	createEngineState,
 	TICK_MS,
-} from '../../game/engine';
-import type { GameEngineState } from '../../game/engine';
+} from '../../games/falling-blocks/core-engine';
+import type { GameEngineState } from '../../games/falling-blocks/core-engine';
 import type { InputAction } from '../../shared/types';
 
 const createLocalSeed = (): string =>

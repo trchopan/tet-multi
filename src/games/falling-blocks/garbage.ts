@@ -2,7 +2,7 @@ import {
 	BOARD_INTERNAL_HEIGHT,
 	BOARD_WIDTH,
 	GARBAGE_ACTIVATION_TICKS,
-} from '../shared/constants';
+} from '../../shared/constants';
 import { addGarbage, type BoardState } from './board';
 
 export interface GarbagePacket {

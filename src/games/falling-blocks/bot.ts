@@ -2,11 +2,11 @@ import {
 	applyInput,
 	cloneEngineState,
 	type GameEngineState,
-} from '../game/engine';
-import { getRotationCells, type PieceRotation } from '../game/pieces';
-import { canPlacePiece } from '../game/board';
-import { DEFAULT_COMPUTER_DIFFICULTY } from '../shared/constants';
-import type { ComputerDifficulty, InputAction } from '../shared/types';
+} from './core-engine';
+import { getRotationCells, type PieceRotation } from './pieces';
+import { canPlacePiece } from './board';
+import { DEFAULT_COMPUTER_DIFFICULTY } from '../../shared/constants';
+import type { ComputerDifficulty, InputAction } from '../../shared/types';
 
 interface BotProfile {
 	minimumReactionTicks: number;
@@ -70,14 +70,14 @@ interface RotationPath {
 
 const ROTATION_PATHS: readonly RotationPath[] = [
 	{ rotationDelta: 0, actions: [] },
-	{ rotationDelta: 1, actions: ['rotate_cw'] },
-	{ rotationDelta: 2, actions: ['rotate_cw', 'rotate_cw'] },
-	{ rotationDelta: 3, actions: ['rotate_cw', 'rotate_cw', 'rotate_cw'] },
-	{ rotationDelta: 3, actions: ['rotate_ccw'] },
-	{ rotationDelta: 2, actions: ['rotate_ccw', 'rotate_ccw'] },
+	{ rotationDelta: 1, actions: ['button_x'] },
+	{ rotationDelta: 2, actions: ['button_x', 'button_x'] },
+	{ rotationDelta: 3, actions: ['button_x', 'button_x', 'button_x'] },
+	{ rotationDelta: 3, actions: ['button_b'] },
+	{ rotationDelta: 2, actions: ['button_b', 'button_b'] },
 	{
 		rotationDelta: 1,
-		actions: ['rotate_ccw', 'rotate_ccw', 'rotate_ccw'],
+		actions: ['button_b', 'button_b', 'button_b'],
 	},
 ];
 
@@ -240,21 +240,21 @@ const candidateFor = (
 		actions.push(rotationAction);
 	}
 	while (simulation.activePiece.x < targetX) {
-		if (!applyInput(simulation, 'move_right', false)) return undefined;
-		actions.push('move_right');
+		if (!applyInput(simulation, 'right', false)) return undefined;
+		actions.push('right');
 	}
 	while (simulation.activePiece.x > targetX) {
-		if (!applyInput(simulation, 'move_left', false)) return undefined;
-		actions.push('move_left');
+		if (!applyInput(simulation, 'left', false)) return undefined;
+		actions.push('left');
 	}
 	if (!canPlacePiece(simulation.board, simulation.activePiece))
 		return undefined;
 	const dropY = landingY(simulation);
 	const activePieceKey = pieceKey(simulation);
 	simulation.activePiece.y = dropY;
-	applyInput(simulation, 'hard_drop', false);
+	applyInput(simulation, 'button_a', false);
 	if (simulation.gameOver) return undefined;
-	actions.push('hard_drop');
+	actions.push('button_a');
 	return {
 		actions,
 		score: boardScore(state, simulation, dropY),
@@ -272,8 +272,8 @@ const enumerateCandidates = (
 	];
 	if (allowHold && !state.holdUsed) {
 		const held = cloneEngineState(state);
-		if (applyInput(held, 'hold', false))
-			sources.push({ state: held, prefix: ['hold'] });
+		if (applyInput(held, 'button_y', false))
+			sources.push({ state: held, prefix: ['button_y'] });
 	}
 	const candidates: PlacementCandidate[] = [];
 	for (const source of sources) {
@@ -326,7 +326,7 @@ const createPlan = (
 ): PlannedPlacement => {
 	const candidates = enumerateCandidates(state, profile.allowHold);
 	if (candidates.length === 0)
-		return { actions: ['hard_drop'], pieceKey: pieceKey(state) };
+		return { actions: ['button_a'], pieceKey: pieceKey(state) };
 
 	const immediate = [...candidates].sort(
 		(first, second) => second.score - first.score,
@@ -344,7 +344,7 @@ const createPlan = (
 			decisionCount % Math.min(profile.nearBestCandidateCount, nearBest.length)
 		] ?? beam[0];
 	if (selected === undefined)
-		return { actions: ['hard_drop'], pieceKey: pieceKey(state) };
+		return { actions: ['button_a'], pieceKey: pieceKey(state) };
 	return { actions: selected.actions, pieceKey: selected.pieceKey };
 };
 

@@ -20,8 +20,7 @@ describe('competitive match rules', () => {
 	test('attacker and eliminated players are never valid targets', () => {
 		const state = createMatchState('target-seed', ['a', 'b', 'c']);
 		eliminatePlayers(state, ['b'], 4);
-		const packet = createAttackPacket(state, 'a', 1, 5);
-		expect(packet?.targetId).toBe('c');
+		expect(createAttackPacket(state, 'a', 1, 5)?.targetId).toBe('c');
 	});
 
 	test('delayed attacks retarget when the original target is eliminated', () => {

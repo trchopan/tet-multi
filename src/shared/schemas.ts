@@ -15,6 +15,7 @@ import {
 	strictObject,
 	string,
 	union,
+	unknown,
 } from 'valibot';
 import {
 	BOARD_CELL_COUNT,
@@ -96,6 +97,7 @@ export const ClientMessageSchema = union([
 		type: literal('create_room'),
 		requestId: identifier,
 		displayName,
+		gameType: optional(identifier),
 	}),
 	strictObject({
 		type: literal('join_room'),
@@ -172,6 +174,8 @@ const playerSnapshot = pipe(
 export const RoomSnapshotSchema = strictObject({
 	protocolVersion,
 	roomCode,
+	gameType: optional(identifier),
+	customGameState: optional(unknown()),
 	phase: roomPhase,
 	hostPlayerId: identifier,
 	serverTick: nonNegativeInteger,

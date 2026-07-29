@@ -26,8 +26,8 @@ const player = (): PlayerSnapshot => ({
 describe('local prediction reconciliation', () => {
 	test('acknowledges inputs and reapplies only pending movement', () => {
 		const pending: PendingInput[] = [
-			{ sequence: 1, action: 'move_left' },
-			{ sequence: 2, action: 'move_right' },
+			{ sequence: 1, action: 'left' },
+			{ sequence: 2, action: 'right' },
 		];
 		const result = reconcilePrediction(player(), pending);
 		expect(result?.pending).toEqual([pending[1]!]);
@@ -36,7 +36,7 @@ describe('local prediction reconciliation', () => {
 
 	test('does not predict hard-drop consequences', () => {
 		const result = reconcilePrediction(player(), [
-			{ sequence: 2, action: 'hard_drop' },
+			{ sequence: 2, action: 'button_a' },
 		]);
 		expect(result?.state.activePiece.y).toBe(4);
 		expect(predictionToSnapshot(player(), result!.state).score).toBeUndefined();

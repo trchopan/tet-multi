@@ -26,7 +26,7 @@ const validClientMessages = [
 	{ type: 'start_match' },
 	{ type: 'add_computer', difficulty: 'legendary' },
 	{ type: 'remove_computer', playerId: 'computer-1' },
-	{ type: 'input', matchId: 'match-1', sequence: 1, action: 'move_left' },
+	{ type: 'input', matchId: 'match-1', sequence: 1, action: 'left' },
 	{ type: 'return_to_lobby' },
 	{ type: 'leave_room' },
 	{ type: 'ping', nonce: 'nonce-1', clientTime: 1_700_000_000_000 },

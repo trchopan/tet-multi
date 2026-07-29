@@ -9,31 +9,6 @@ import {
 	PROTOCOL_VERSION,
 } from '../shared/constants';
 import type { ComputerDifficulty } from '../shared/types';
-import {
-	applyInput,
-	advanceTicks,
-	cancelIncomingGarbage,
-	createEngineState,
-	enqueueGarbagePacket,
-	resolveReadyGarbage,
-	takeLastPlacement,
-	type GameEngineState,
-} from '../game/engine';
-import {
-	createAttackPacket,
-	createMatchState,
-	eliminatePlayers,
-	retargetAttackPackets,
-	type AttackPacket,
-	type MatchState,
-} from '../game/match';
-import {
-	createBotController,
-	invalidateBotPlan,
-	nextBotAction,
-	type BotController,
-} from './bot';
-import { serializeBoard } from '../game/board';
 import type {
 	RoomSnapshot,
 	ServerMessage,
@@ -48,9 +23,11 @@ import {
 	type SocketLike,
 } from './session';
 import { sendServerMessage } from './socket-sender';
+import { gameRegistry, type GameEngine } from '../games';
 
 export interface RoomOptions {
 	readonly code: string;
+	readonly gameType?: string;
 	readonly now?: () => number;
 	readonly createId?: () => string;
 	readonly createSeed?: () => string;
@@ -75,6 +52,7 @@ const MATCH_COUNTDOWN_MS = 3000;
 
 export class Room {
 	readonly code: string;
+	readonly gameType: string;
 	readonly createdAt: number;
 	private readonly now: () => number;
 	private readonly createId: () => string;
@@ -90,23 +68,20 @@ export class Room {
 	private matchId?: string;
 	private matchSeed?: string;
 	private winnerPlayerIds?: string[];
-	private match?: MatchState;
-	private readonly engines = new Map<string, GameEngineState>();
+	private genericEngine?: GameEngine;
 	private readonly inputQueues = new Map<string, QueuedInput[]>();
-	private readonly botControllers = new Map<string, BotController>();
 	private readonly lastProcessedInput = new Map<string, number>();
 	private readonly lastAcceptedInput = new Map<string, number>();
 	private readonly inputWindows = new Map<
 		string,
 		{ last: number; tokens: number }
 	>();
-	private readonly attackSent = new Map<string, number>();
-	private pendingAttacks: AttackPacket[] = [];
 	private emptySince?: number;
 	private lastLobbyHeartbeatAt: number;
 
 	constructor(options: RoomOptions) {
 		this.code = options.code;
+		this.gameType = options.gameType ?? 'falling-blocks';
 		this.now = options.now ?? Date.now;
 		this.createId = options.createId ?? (() => crypto.randomUUID());
 		this.createSeed = options.createSeed ?? (() => crypto.randomUUID());
@@ -135,6 +110,15 @@ export class Room {
 		return [...this.sessions.values()].sort((a, b) => a.joinedAt - b.joinedAt);
 	}
 
+	/** Backward-compatibility hooks for inspection in tests */
+	get engines(): Map<string, unknown> {
+		return (this.genericEngine as any)?.engines ?? new Map();
+	}
+
+	get botControllers(): Map<string, unknown> {
+		return (this.genericEngine as any)?.botControllers ?? new Map();
+	}
+
 	join(
 		clientId: string,
 		displayName: string,
@@ -156,10 +140,6 @@ export class Room {
 				session.socket.close(4001, 'Session replaced');
 			session.socket = socket;
 			session.connected = true;
-			const matchPlayer = this.match?.players.find(
-				(player) => player.playerId === session.playerId,
-			);
-			if (matchPlayer !== undefined) matchPlayer.connected = true;
 			if (session.matchState === 'disconnected') {
 				if (this.phase === 'playing') session.matchState = 'playing';
 				else if (this.phase === 'countdown' || this.phase === 'finished')
@@ -257,15 +237,11 @@ export class Room {
 		delete this.matchId;
 		delete this.matchSeed;
 		delete this.winnerPlayerIds;
-		delete this.match;
-		this.engines.clear();
+		delete this.genericEngine;
 		this.inputQueues.clear();
-		this.botControllers.clear();
 		this.lastProcessedInput.clear();
 		this.lastAcceptedInput.clear();
 		this.inputWindows.clear();
-		this.attackSent.clear();
-		this.pendingAttacks = [];
 		for (const session of this.sessions.values()) {
 			session.ready = session.playerType === 'computer';
 			session.matchState = 'waiting';
@@ -278,10 +254,6 @@ export class Room {
 		if (session.playerType === 'computer')
 			throw new RoomError('INVALID_PLAYER');
 		if (this.phase === 'playing') {
-			const matchPlayer = this.match?.players.find(
-				(player) => player.playerId === playerId,
-			);
-			if (matchPlayer !== undefined) matchPlayer.connected = false;
 			this.eliminate([playerId]);
 		}
 		this.sessions.delete(playerId);
@@ -297,10 +269,6 @@ export class Room {
 		if (session.playerType === 'computer') return;
 		if (socket !== undefined && session.socket !== socket) return;
 		session.connected = false;
-		const matchPlayer = this.match?.players.find(
-			(player) => player.playerId === session.playerId,
-		);
-		if (matchPlayer !== undefined) matchPlayer.connected = false;
 		session.matchState = this.phase === 'lobby' ? 'waiting' : 'disconnected';
 		session.reconnectDeadline = now + this.reconnectGraceMs;
 		delete session.socket;
@@ -317,32 +285,23 @@ export class Room {
 			this.phase = 'playing';
 			if (this.matchId === undefined || this.matchSeed === undefined)
 				throw new Error('Match is incomplete');
-			this.match = createMatchState(
-				this.matchSeed,
-				this.players.map((session) => session.playerId),
-			);
-			for (const [rosterIndex, session] of this.players.entries()) {
-				this.engines.set(
-					session.playerId,
-					createEngineState(this.matchSeed, rosterIndex),
-				);
-				const matchPlayer = this.match.players[rosterIndex];
-				if (matchPlayer !== undefined)
-					matchPlayer.connected = session.connected;
+			if (gameRegistry.has(this.gameType)) {
+				this.genericEngine = gameRegistry.get(this.gameType).createEngine({
+					matchId: this.matchId,
+					seed: this.matchSeed,
+					players: this.players.map((session) => ({
+						playerId: session.playerId,
+						displayName: session.displayName,
+						playerType: session.playerType,
+						computerDifficulty: session.computerDifficulty,
+					})),
+				});
+			}
+			for (const session of this.players) {
 				session.matchState = session.connected ? 'playing' : 'disconnected';
 				this.inputQueues.set(session.playerId, []);
 				this.lastProcessedInput.set(session.playerId, 0);
 				this.lastAcceptedInput.set(session.playerId, 0);
-				this.attackSent.set(session.playerId, 0);
-				if (session.playerType === 'computer')
-					this.botControllers.set(
-						session.playerId,
-						createBotController(
-							this.matchSeed,
-							rosterIndex,
-							session.computerDifficulty,
-						),
-					);
 			}
 			this.broadcast({
 				type: 'match_started',
@@ -367,10 +326,6 @@ export class Room {
 				if (this.phase === 'playing') {
 					delete session.reconnectDeadline;
 					session.connected = false;
-					const matchPlayer = this.match?.players.find(
-						(player) => player.playerId === session.playerId,
-					);
-					if (matchPlayer !== undefined) matchPlayer.connected = false;
 					if (session.playerId === this.hostPlayerId) this.migrateHost();
 					expiredMatchPlayers.push(session.playerId);
 					continue;
@@ -403,12 +358,16 @@ export class Room {
 		const snapshot: RoomSnapshot = {
 			protocolVersion: PROTOCOL_VERSION,
 			roomCode: this.code,
+			gameType: this.gameType,
 			phase: this.phase,
 			hostPlayerId: this.hostPlayerId,
 			serverTick: this.serverTick,
 			serverTime,
 			players: this.players.map((session) => this.playerSnapshot(session)),
 		};
+		if (this.genericEngine) {
+			snapshot.customGameState = this.genericEngine.getPublicSnapshot();
+		}
 		if (this.countdownEndsAt !== undefined)
 			snapshot.countdownEndsAt = this.countdownEndsAt;
 		if (this.matchId !== undefined) snapshot.matchId = this.matchId;
@@ -461,124 +420,64 @@ export class Room {
 
 	private simulateTick(now: number): void {
 		this.serverTick += 1;
-		const eliminated: string[] = [];
-		const ordered = this.players.filter(
-			(session) => session.matchState !== 'eliminated',
-		);
-		for (const session of ordered) {
-			if (session.playerType !== 'computer') continue;
-			const engine = this.engines.get(session.playerId);
-			const controller = this.botControllers.get(session.playerId);
+		if (!this.genericEngine) return;
+
+		const inputsToProcess: {
+			playerId: string;
+			sequence: number;
+			action: any;
+		}[] = [];
+
+		for (const session of this.players) {
 			const queue = this.inputQueues.get(session.playerId);
-			if (
-				engine === undefined ||
-				controller === undefined ||
-				queue === undefined
-			)
-				continue;
-			const action = nextBotAction(controller, engine);
-			if (action !== undefined) {
-				const sequence =
-					(this.lastAcceptedInput.get(session.playerId) ?? 0) + 1;
-				queue.push({ sequence, action });
-				this.lastAcceptedInput.set(session.playerId, sequence);
-			}
-		}
-		for (const session of ordered) {
-			const engine = this.engines.get(session.playerId);
-			const queue = this.inputQueues.get(session.playerId);
-			if (engine === undefined || queue === undefined) continue;
-			while (queue.length > 0) {
-				const input = queue.shift();
-				if (input === undefined) break;
-				if (
-					input.sequence <= (this.lastProcessedInput.get(session.playerId) ?? 0)
-				)
-					continue;
-				const applied = applyInput(engine, input.action, false);
-				if (!applied && session.playerType === 'computer') {
-					const controller = this.botControllers.get(session.playerId);
-					if (controller !== undefined) invalidateBotPlan(controller);
+			if (queue && queue.length > 0) {
+				while (queue.length > 0) {
+					const input = queue.shift()!;
+					inputsToProcess.push({
+						playerId: session.playerId,
+						sequence: input.sequence,
+						action: input.action,
+					});
+					this.lastProcessedInput.set(session.playerId, input.sequence);
 				}
-				this.lastProcessedInput.set(session.playerId, input.sequence);
-				this.processPlacement(session.playerId, engine);
 			}
-			advanceTicks(engine, 1, false);
-			this.processPlacement(session.playerId, engine);
-			if (engine.gameOver) eliminated.push(session.playerId);
 		}
-		if (eliminated.length > 0) {
-			this.eliminate(eliminated);
-			if (this.phase !== 'playing') return;
+
+		this.genericEngine.tick(this.serverTick, inputsToProcess);
+
+		const summaries = this.genericEngine.getPlayerSummaries();
+		for (const [id, summary] of summaries) {
+			const session = this.sessions.get(id);
+			if (session) {
+				if (session.matchState !== 'disconnected') {
+					session.matchState = summary.matchState;
+				}
+			}
 		}
-		this.pendingAttacks = retargetAttackPackets(
-			this.match!,
-			this.pendingAttacks,
-		);
-		for (const packet of this.pendingAttacks) {
-			const target = this.engines.get(packet.targetId);
-			if (target !== undefined) enqueueGarbagePacket(target, packet);
+
+		if (this.genericEngine.isFinished()) {
+			this.finishMatch(this.genericEngine.getWinners());
+			return;
 		}
-		this.pendingAttacks = [];
+
 		if (
 			this.phase === 'playing' &&
 			this.serverTick % NORMAL_SNAPSHOT_INTERVAL_TICKS === 0
-		)
+		) {
 			this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot(now) });
-	}
-
-	private processPlacement(playerId: string, engine: GameEngineState): void {
-		const placement = takeLastPlacement(engine);
-		if (placement === undefined || this.match === undefined) return;
-		const cancelled = cancelIncomingGarbage(engine, placement.attack);
-		const outgoing = placement.attack - cancelled;
-		if (outgoing > 0) {
-			this.attackSent.set(
-				playerId,
-				(this.attackSent.get(playerId) ?? 0) + outgoing,
-			);
-			const packet = createAttackPacket(
-				this.match,
-				playerId,
-				outgoing,
-				this.serverTick,
-			);
-			if (packet !== undefined) this.pendingAttacks.push(packet);
 		}
-		if (resolveReadyGarbage(engine)) engine.gameOver = true;
 	}
 
 	private eliminate(playerIds: readonly string[]): void {
-		if (this.match === undefined || this.phase !== 'playing') return;
-		const result = eliminatePlayers(this.match, playerIds, this.serverTick);
+		if (this.phase !== 'playing' || !this.genericEngine) return;
+		this.genericEngine.eliminatePlayers?.(playerIds);
 		for (const playerId of playerIds) {
 			const session = this.sessions.get(playerId);
 			if (session !== undefined) session.matchState = 'eliminated';
 		}
-		if (result.finished) {
-			this.finishMatch(result.winnerPlayerIds);
-			return;
+		if (this.genericEngine.isFinished()) {
+			this.finishMatch(this.genericEngine.getWinners());
 		}
-		this.finishComputerOnlyMatch();
-	}
-
-	private finishComputerOnlyMatch(): void {
-		if (this.match === undefined || this.phase !== 'playing') return;
-		if (
-			this.players.some(
-				(session) =>
-					session.playerType === 'human' && session.matchState !== 'eliminated',
-			)
-		)
-			return;
-		const winners = this.match.players.filter(
-			(player) =>
-				!player.eliminated &&
-				this.sessions.get(player.playerId)?.playerType === 'computer',
-		);
-		if (winners.length === 0) return;
-		for (const winner of winners) winner.placement = 1;
-		this.finishMatch(winners.map((winner) => winner.playerId));
 	}
 
 	private finishMatch(winnerPlayerIds: readonly string[]): void {
@@ -588,10 +487,6 @@ export class Room {
 	}
 
 	private playerSnapshot(session: Session): RoomSnapshot['players'][number] {
-		const engine = this.engines.get(session.playerId);
-		const player = this.match?.players.find(
-			(candidate) => candidate.playerId === session.playerId,
-		);
 		const snapshot: RoomSnapshot['players'][number] = {
 			playerId: session.playerId,
 			displayName: session.displayName,
@@ -605,29 +500,38 @@ export class Room {
 			ready: session.ready,
 			isHost: session.playerId === this.hostPlayerId,
 			matchState: session.matchState,
-			...(player?.placement === undefined
-				? {}
-				: { placement: player.placement }),
-			...(player?.eliminatedAtTick === undefined
-				? {}
-				: { eliminatedAtTick: player.eliminatedAtTick }),
 		};
-		if (engine !== undefined) {
-			snapshot.board = serializeBoard(engine.board);
-			snapshot.activePiece = { ...engine.activePiece };
-			if (engine.hold !== null) snapshot.hold = engine.hold;
-			snapshot.next = [...engine.next];
-			snapshot.score = engine.score;
-			snapshot.lines = engine.lines;
-			snapshot.level = engine.level;
-			snapshot.combo = engine.combo;
-			snapshot.maxCombo = Math.max(0, engine.maxCombo);
-			snapshot.backToBack = engine.backToBack;
-			snapshot.attackSent = this.attackSent.get(session.playerId) ?? 0;
-			snapshot.incomingGarbage = engine.incomingGarbage.reduce(
-				(sum, packet) => sum + packet.lines,
-				0,
-			);
+		if (this.genericEngine) {
+			const summary = this.genericEngine
+				.getPlayerSummaries()
+				.get(session.playerId);
+			if (summary) {
+				if (summary.score !== undefined) snapshot.score = summary.score;
+				if (summary.placement !== undefined)
+					snapshot.placement = summary.placement;
+				if (summary.eliminatedAtTick !== undefined)
+					snapshot.eliminatedAtTick = summary.eliminatedAtTick;
+				if (summary.board !== undefined) snapshot.board = summary.board;
+				if (summary.activePiece !== undefined)
+					snapshot.activePiece = summary.activePiece;
+				if (summary.hold !== undefined) snapshot.hold = summary.hold;
+				if (summary.next !== undefined) snapshot.next = summary.next;
+				if (summary.lines !== undefined) snapshot.lines = summary.lines;
+				if (summary.level !== undefined) snapshot.level = summary.level;
+				if (summary.combo !== undefined) snapshot.combo = summary.combo;
+				if (summary.maxCombo !== undefined)
+					snapshot.maxCombo = summary.maxCombo;
+				if (summary.backToBack !== undefined)
+					snapshot.backToBack = summary.backToBack;
+				if (summary.attackSent !== undefined)
+					snapshot.attackSent = summary.attackSent;
+				if (summary.incomingGarbage !== undefined)
+					snapshot.incomingGarbage = summary.incomingGarbage;
+				if (summary.lastProcessedInput !== undefined)
+					snapshot.lastProcessedInput = summary.lastProcessedInput;
+			}
+		}
+		if (snapshot.lastProcessedInput === undefined) {
 			snapshot.lastProcessedInput =
 				this.lastProcessedInput.get(session.playerId) ?? 0;
 		}
@@ -640,12 +544,11 @@ export class Room {
 
 	/** Test-only fixture hook; production HTTP never exposes this method. */
 	forceTestTopOut(): void {
-		const player = this.players.find(
-			(session) => session.matchState !== 'eliminated',
-		);
-		if (this.phase !== 'playing' || player === undefined) return;
-		const engine = this.engines.get(player.playerId);
-		if (engine !== undefined) engine.gameOver = true;
+		if (this.phase !== 'playing' || !this.genericEngine) return;
+		this.genericEngine.forceTestTopOut?.();
+		if (this.genericEngine.isFinished()) {
+			this.finishMatch(this.genericEngine.getWinners());
+		}
 	}
 
 	private requireSession(playerId: string): Session {

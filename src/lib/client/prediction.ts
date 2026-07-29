@@ -2,8 +2,8 @@ import {
 	applyInput,
 	createEngineState,
 	type GameEngineState,
-} from '../../game/engine';
-import { serializeBoard, type BoardCell } from '../../game/board';
+} from '../../games/falling-blocks/core-engine';
+import { serializeBoard, type BoardCell } from '../../games/falling-blocks/board';
 import type { InputAction, PlayerSnapshot } from '../../shared/types';
 
 export interface PendingInput {
@@ -11,7 +11,7 @@ export interface PendingInput {
 	action: InputAction;
 }
 
-const authoritativeActions = new Set<InputAction>(['hard_drop', 'hold']);
+const authoritativeActions = new Set<InputAction>(['button_a', 'button_y']);
 
 export const isPredictableInput = (action: InputAction): boolean =>
 	!authoritativeActions.has(action);

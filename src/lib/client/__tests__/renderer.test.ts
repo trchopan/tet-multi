@@ -8,7 +8,7 @@ import {
 	cloneEngineState,
 	createEngineState,
 	hashEngineState,
-} from '../../../game/engine';
+} from '../../../games/falling-blocks/core-engine';
 import {
 	getCanvasMetrics,
 	getGhostPosition,

@@ -91,11 +91,14 @@ export class MultiplayerSession {
 	private latestServerTick = -1;
 	private readonly onRoomJoined: ((roomCode: string) => void) | undefined;
 
+	private selectedGameType = 'falling-blocks';
+
 	public constructor(onRoomJoined?: (roomCode: string) => void) {
 		this.onRoomJoined = onRoomJoined;
 	}
 
-	public createRoom(displayName: string): void {
+	public createRoom(displayName: string, gameType = 'falling-blocks'): void {
+		this.selectedGameType = gameType;
 		this.startConnection('create', '', displayName);
 	}
 
@@ -203,6 +206,7 @@ export class MultiplayerSession {
 					type: 'create_room',
 					requestId: this.nextRequestId(),
 					displayName: this.displayName,
+					gameType: this.selectedGameType,
 				});
 			} else {
 				const reconnectToken = getReconnectToken(this.roomCode);

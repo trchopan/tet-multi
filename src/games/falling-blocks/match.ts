@@ -1,6 +1,10 @@
-import { BOARD_WIDTH } from '../shared/constants';
+import { BOARD_WIDTH } from '../../shared/constants';
 import { createGarbagePacket, type GarbagePacket } from './garbage';
-import { createRandomState, nextRandomIndex, type RandomState } from './random';
+import {
+	createRandomState,
+	nextRandomIndex,
+	type RandomState,
+} from '../../shared/random';
 
 export interface MatchPlayerState {
 	playerId: string;
