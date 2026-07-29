@@ -89,6 +89,7 @@ export const renderSnakeSharedView = (
 		ctx.fillStyle = color.body;
 		for (let i = snakeData.body.length - 1; i > 0; i--) {
 			const seg = snakeData.body[i]!;
+			const lvl = snakeData.levels?.[i] ?? 1;
 			const pad = 1;
 			ctx.fillRect(
 				seg.x * cellW + pad,
@@ -96,10 +97,19 @@ export const renderSnakeSharedView = (
 				Math.max(1, cellW - pad * 2),
 				Math.max(1, cellH - pad * 2),
 			);
+			if (lvl > 1) {
+				ctx.fillStyle = '#ffffff';
+				ctx.font = 'bold 9px sans-serif';
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+				ctx.fillText(`${lvl}`, (seg.x + 0.5) * cellW, (seg.y + 0.5) * cellH);
+				ctx.fillStyle = color.body;
+			}
 		}
 
 		// Draw Head
 		const head = snakeData.body[0]!;
+		const headLvl = snakeData.levels?.[0] ?? 1;
 		ctx.fillStyle = color.head;
 		ctx.fillRect(
 			head.x * cellW + 1,
@@ -107,6 +117,18 @@ export const renderSnakeSharedView = (
 			Math.max(1, cellW - 2),
 			Math.max(1, cellH - 2),
 		);
+		if (headLvl > 1) {
+			ctx.fillStyle = '#ffffff';
+			ctx.font = 'bold 9px sans-serif';
+			ctx.textAlign = 'center';
+			ctx.textBaseline = 'middle';
+			ctx.fillText(
+				`${headLvl}`,
+				(head.x + 0.5) * cellW,
+				(head.y + 0.5) * cellH,
+			);
+			ctx.fillStyle = color.head;
+		}
 
 		// Draw Head Eyes
 		ctx.fillStyle = '#ffffff';
@@ -114,7 +136,7 @@ export const renderSnakeSharedView = (
 		let eye1X = (head.x + 0.3) * cellW;
 		let eye1Y = (head.y + 0.3) * cellH;
 		let eye2X = (head.x + 0.7) * cellW;
-		let eye2Y = (head.y + 0.3) * cellH;
+		let eye2Y = (head.y + 0.7) * cellH;
 
 		if (snakeData.direction === 'down') {
 			eye1Y = eye2Y = (head.y + 0.7) * cellH;

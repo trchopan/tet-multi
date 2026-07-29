@@ -21,12 +21,7 @@ describe('deterministic engine foundation', () => {
 	test('same seed, roster, and inputs produce the same hash', () => {
 		const first = createEngineState('replay-seed', 1);
 		const second = createEngineState('replay-seed', 1);
-		const inputs = [
-			'left',
-			'left',
-			'right',
-			'right',
-		] as const;
+		const inputs = ['left', 'left', 'right', 'right'] as const;
 		for (const input of inputs) {
 			applyHorizontalInput(first, input);
 			applyHorizontalInput(second, input);
@@ -178,10 +173,7 @@ describe('deterministic engine foundation', () => {
 		state.lockMs = 400;
 		for (let index = 0; index < 15; index += 1) {
 			expect(
-				applyHorizontalInput(
-					state,
-					index % 2 === 0 ? 'left' : 'right',
-				),
+				applyHorizontalInput(state, index % 2 === 0 ? 'left' : 'right'),
 			).toBe(true);
 		}
 		expect(state.groundedResets).toBe(15);

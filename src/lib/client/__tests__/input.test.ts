@@ -193,12 +193,7 @@ describe('local swipe input', () => {
 		swipe(target, [100, 100], [100, 40]);
 		swipe(target, [100, 100], [100, 160]);
 
-		expect(actions).toEqual([
-			'left',
-			'right',
-			'button_x',
-			'down',
-		]);
+		expect(actions).toEqual(['left', 'right', 'button_x', 'down']);
 		expect(target.focused).toBe(true);
 		input.dispose();
 	});

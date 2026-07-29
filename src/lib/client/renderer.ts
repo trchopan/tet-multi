@@ -4,8 +4,15 @@ import {
 	BOARD_VISIBLE_HEIGHT,
 	BOARD_WIDTH,
 } from '../../shared/constants';
-import { canPlacePiece, pieceCells, type BoardCell } from '../../games/falling-blocks/board';
-import type { ActivePiece, GameEngineState } from '../../games/falling-blocks/core-engine';
+import {
+	canPlacePiece,
+	pieceCells,
+	type BoardCell,
+} from '../../games/falling-blocks/board';
+import type {
+	ActivePiece,
+	GameEngineState,
+} from '../../games/falling-blocks/core-engine';
 import { pieceValue } from '../../games/falling-blocks/pieces';
 import type { PlayerSnapshot } from '../../shared/types';
 import { PIECE_COLORS } from './theme';
