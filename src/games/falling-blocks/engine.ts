@@ -1,4 +1,5 @@
 import type {
+	EngineInitPlayer,
 	GameEngine,
 	PlayerGameSummary,
 	PlayerInputEnvelope,
@@ -8,6 +9,8 @@ import {
 	applyInput,
 	advanceTicks,
 	takeLastPlacement,
+	cancelIncomingGarbage,
+	enqueueGarbagePacket,
 	resolveReadyGarbage,
 	type GameEngineState,
 } from '../../game/engine';
@@ -19,7 +22,12 @@ import {
 	type AttackPacket,
 	type MatchState,
 } from '../../game/match';
-import { enqueueGarbage } from '../../game/garbage';
+import {
+	createBotController,
+	invalidateBotPlan,
+	nextBotAction,
+	type BotController,
+} from '../../server/bot';
 import { serializeBoard } from '../../game/board';
 import type { InputAction } from '../../shared/types';
 
@@ -27,22 +35,36 @@ export class FallingBlocksGameEngine implements GameEngine<
 	unknown,
 	InputAction
 > {
-	private readonly match: MatchState;
-	private readonly engines = new Map<string, GameEngineState>();
+	readonly match: MatchState;
+	readonly engines = new Map<string, GameEngineState>();
+	readonly botControllers = new Map<string, BotController>();
+	private readonly attackSent = new Map<string, number>();
+	private readonly lastProcessedInput = new Map<string, number>();
 	private pendingAttacks: AttackPacket[] = [];
 	private isGameOver = false;
 	private winners: string[] = [];
+	private currentTick = 0;
 
 	constructor(
 		_matchId: string,
 		seed: string,
-		players: readonly { playerId: string; displayName: string }[],
+		players: readonly EngineInitPlayer[],
 	) {
 		const roster = players.map((p) => p.playerId);
 		this.match = createMatchState(seed, roster);
 		for (let i = 0; i < roster.length; i++) {
-			const id = roster[i]!;
-			this.engines.set(id, createEngineState(seed, i));
+			const player = players[i]!;
+			const engine = createEngineState(seed, i);
+			this.engines.set(player.playerId, engine);
+			this.attackSent.set(player.playerId, 0);
+			this.lastProcessedInput.set(player.playerId, 0);
+
+			if (player.playerType === 'computer') {
+				this.botControllers.set(
+					player.playerId,
+					createBotController(seed, i, player.computerDifficulty),
+				);
+			}
 		}
 	}
 
@@ -51,16 +73,41 @@ export class FallingBlocksGameEngine implements GameEngine<
 		inputs: readonly PlayerInputEnvelope<InputAction>[],
 	): void {
 		if (this.isGameOver) return;
+		this.currentTick = serverTick;
 
-		// 1. Group inputs by player
+		// 1. Group human inputs by player
 		const inputsByPlayer = new Map<string, InputAction[]>();
 		for (const env of inputs) {
 			const arr = inputsByPlayer.get(env.playerId) ?? [];
 			arr.push(env.action);
 			inputsByPlayer.set(env.playerId, arr);
+			this.lastProcessedInput.set(
+				env.playerId,
+				Math.max(
+					this.lastProcessedInput.get(env.playerId) ?? 0,
+					env.sequence,
+				),
+			);
 		}
 
-		// 2. Process active players in order
+		// 2. Generate computer inputs
+		for (const player of this.match.players) {
+			if (player.eliminated) continue;
+			const controller = this.botControllers.get(player.playerId);
+			const engine = this.engines.get(player.playerId);
+			if (!controller || !engine) continue;
+
+			const botAction = nextBotAction(controller, engine);
+			if (botAction !== undefined) {
+				const arr = inputsByPlayer.get(player.playerId) ?? [];
+				arr.push(botAction);
+				inputsByPlayer.set(player.playerId, arr);
+				const currentSeq = this.lastProcessedInput.get(player.playerId) ?? 0;
+				this.lastProcessedInput.set(player.playerId, currentSeq + 1);
+			}
+		}
+
+		// 3. Process active players in order
 		const newlyEliminated: string[] = [];
 
 		for (const player of this.match.players) {
@@ -70,30 +117,23 @@ export class FallingBlocksGameEngine implements GameEngine<
 
 			const playerInputs = inputsByPlayer.get(player.playerId) ?? [];
 			for (const action of playerInputs) {
-				applyInput(engine, action);
-			}
-
-			advanceTicks(engine, 1);
-
-			const placement = takeLastPlacement(engine);
-			if (placement && placement.attack > 0) {
-				const attack = createAttackPacket(
-					this.match,
-					player.playerId,
-					placement.attack,
-					serverTick,
-				);
-				if (attack) {
-					this.pendingAttacks.push(attack);
+				const applied = applyInput(engine, action, false);
+				if (!applied) {
+					const controller = this.botControllers.get(player.playerId);
+					if (controller) invalidateBotPlan(controller);
 				}
+				this.processPlacement(player.playerId, engine, serverTick);
 			}
+
+			advanceTicks(engine, 1, false);
+			this.processPlacement(player.playerId, engine, serverTick);
 
 			if (engine.gameOver) {
 				newlyEliminated.push(player.playerId);
 			}
 		}
 
-		// 3. Process attack cancellation & garbage enqueue
+		// 4. Retarget attack packets & enqueue garbage
 		this.pendingAttacks = retargetAttackPackets(
 			this.match,
 			this.pendingAttacks,
@@ -101,12 +141,12 @@ export class FallingBlocksGameEngine implements GameEngine<
 		for (const packet of this.pendingAttacks) {
 			const targetEngine = this.engines.get(packet.targetId);
 			if (targetEngine) {
-				enqueueGarbage(targetEngine.incomingGarbage, packet);
+				enqueueGarbagePacket(targetEngine, packet);
 			}
 		}
 		this.pendingAttacks = [];
 
-		// 4. Resolve garbage for remaining active players
+		// 5. Resolve ready garbage for remaining active players
 		for (const player of this.match.players) {
 			if (player.eliminated) continue;
 			const engine = this.engines.get(player.playerId);
@@ -118,13 +158,80 @@ export class FallingBlocksGameEngine implements GameEngine<
 			}
 		}
 
-		// 5. Process eliminations
+		// 6. Process eliminations & match status
 		if (newlyEliminated.length > 0) {
-			const result = eliminatePlayers(this.match, newlyEliminated, serverTick);
-			if (result.finished) {
-				this.isGameOver = true;
-				this.winners = result.winnerPlayerIds;
+			this.eliminate(newlyEliminated, serverTick);
+		} else {
+			this.checkComputerOnlyMatch();
+		}
+	}
+
+	private processPlacement(
+		playerId: string,
+		engine: GameEngineState,
+		serverTick: number,
+	): void {
+		const placement = takeLastPlacement(engine);
+		if (!placement) return;
+
+		const cancelled = cancelIncomingGarbage(engine, placement.attack);
+		const outgoing = placement.attack - cancelled;
+		if (outgoing > 0) {
+			this.attackSent.set(
+				playerId,
+				(this.attackSent.get(playerId) ?? 0) + outgoing,
+			);
+			const packet = createAttackPacket(
+				this.match,
+				playerId,
+				outgoing,
+				serverTick,
+			);
+			if (packet) {
+				this.pendingAttacks.push(packet);
 			}
+		}
+	}
+
+	private eliminate(playerIds: readonly string[], serverTick: number): void {
+		const result = eliminatePlayers(this.match, playerIds, serverTick);
+		if (result.finished) {
+			this.isGameOver = true;
+			this.winners = result.winnerPlayerIds;
+			return;
+		}
+		this.checkComputerOnlyMatch();
+	}
+
+	public eliminatePlayers(playerIds: readonly string[]): void {
+		this.eliminate(playerIds, this.currentTick);
+	}
+
+	private checkComputerOnlyMatch(): void {
+		if (this.isGameOver) return;
+		const hasActiveHuman = this.match.players.some(
+			(p) => !p.eliminated && !this.botControllers.has(p.playerId),
+		);
+		if (hasActiveHuman) return;
+
+		const activeComputers = this.match.players.filter(
+			(p) => !p.eliminated && this.botControllers.has(p.playerId),
+		);
+		if (activeComputers.length === 0) return;
+
+		for (const computer of activeComputers) {
+			computer.placement = 1;
+		}
+		this.isGameOver = true;
+		this.winners = activeComputers.map((c) => c.playerId);
+	}
+
+	public forceTestTopOut(): void {
+		const activePlayer = this.match.players.find((p) => !p.eliminated);
+		if (!activePlayer) return;
+		const engine = this.engines.get(activePlayer.playerId);
+		if (engine) {
+			engine.gameOver = true;
 		}
 	}
 
@@ -159,12 +266,15 @@ export class FallingBlocksGameEngine implements GameEngine<
 					lines: engine.lines,
 					level: engine.level,
 					combo: engine.combo,
-					maxCombo: engine.maxCombo,
+					maxCombo: Math.max(0, engine.maxCombo),
 					backToBack: engine.backToBack,
+					attackSent: this.attackSent.get(player.playerId) ?? 0,
 					incomingGarbage: engine.incomingGarbage.reduce(
 						(acc, p) => acc + p.lines,
 						0,
 					),
+					lastProcessedInput:
+						this.lastProcessedInput.get(player.playerId) ?? 0,
 				});
 			} else {
 				summaries.set(player.playerId, {

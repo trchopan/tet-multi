@@ -1,4 +1,4 @@
-import type { PlayerSnapshot, RoomSnapshot } from '../shared/types';
+import type { ComputerDifficulty, PlayerSnapshot, RoomSnapshot } from '../shared/types';
 
 export type ViewMode = 'per-player-card' | 'shared-canvas' | 'hybrid-table';
 
@@ -31,12 +31,20 @@ export interface PlayerGameSummary {
 	readonly backToBack?: boolean | undefined;
 	readonly attackSent?: number | undefined;
 	readonly incomingGarbage?: number | undefined;
+	readonly lastProcessedInput?: number | undefined;
+}
+
+export interface EngineInitPlayer {
+	readonly playerId: string;
+	readonly displayName: string;
+	readonly playerType?: 'human' | 'computer' | undefined;
+	readonly computerDifficulty?: ComputerDifficulty | undefined;
 }
 
 export interface EngineInitOptions<TConfig = unknown> {
 	readonly matchId: string;
 	readonly seed: string;
-	readonly players: readonly { playerId: string; displayName: string }[];
+	readonly players: readonly EngineInitPlayer[];
 	readonly config?: TConfig;
 }
 
@@ -68,6 +76,12 @@ export interface GameEngine<
 
 	/** Deterministic state hash for verification */
 	getHash(): string;
+
+	/** Optional hook to eliminate players when they explicitly leave or time out */
+	eliminatePlayers?(playerIds: readonly string[]): void;
+
+	/** Optional test hook to force a top-out */
+	forceTestTopOut?(): void;
 }
 
 export interface RectBounds {

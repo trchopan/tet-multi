@@ -16,20 +16,20 @@ export const fallingBlocksPlugin: GamePlugin = {
 	viewMode: 'per-player-card',
 	aspectRatio: 1 / 2,
 	controls: [
-		{ action: 'moveLeft', label: 'Move Left', defaultKeys: ['ArrowLeft', 'a'] },
+		{ action: 'move_left', label: 'Move Left', defaultKeys: ['ArrowLeft', 'a'] },
 		{
-			action: 'moveRight',
+			action: 'move_right',
 			label: 'Move Right',
 			defaultKeys: ['ArrowRight', 'd'],
 		},
-		{ action: 'softDrop', label: 'Soft Drop', defaultKeys: ['ArrowDown', 's'] },
-		{ action: 'hardDrop', label: 'Hard Drop', defaultKeys: ['Space'] },
+		{ action: 'soft_drop', label: 'Soft Drop', defaultKeys: ['ArrowDown', 's'] },
+		{ action: 'hard_drop', label: 'Hard Drop', defaultKeys: ['Space'] },
 		{
-			action: 'rotateCw',
+			action: 'rotate_cw',
 			label: 'Rotate CW',
 			defaultKeys: ['ArrowUp', 'w', 'x'],
 		},
-		{ action: 'rotateCcw', label: 'Rotate CCW', defaultKeys: ['Control', 'z'] },
+		{ action: 'rotate_ccw', label: 'Rotate CCW', defaultKeys: ['Control', 'z'] },
 		{ action: 'hold', label: 'Hold Piece', defaultKeys: ['Shift', 'c'] },
 	],
 	createEngine(options) {
