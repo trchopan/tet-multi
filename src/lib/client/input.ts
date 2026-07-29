@@ -56,9 +56,22 @@ const keyActions: Readonly<Record<string, InputAction>> = {
 	c: 'hold',
 	C: 'hold',
 	Shift: 'hold',
+	j: 'button_a',
+	J: 'button_a',
+	k: 'button_b',
+	K: 'button_b',
+	u: 'button_x',
+	U: 'button_x',
+	i: 'button_y',
+	I: 'button_y',
 };
 
-const horizontalActions = new Set<InputAction>(['move_left', 'move_right']);
+const horizontalActions = new Set<InputAction>([
+	'move_left',
+	'move_right',
+	'left',
+	'right',
+]);
 
 export const mapKeyToAction = (key: string): InputAction | undefined =>
 	keyActions[key];
@@ -256,5 +269,45 @@ export class SwipeInput {
 		);
 		if (this.pointerId !== undefined) this.clearPointer(this.pointerId);
 		this.lastDownSwipeAt = undefined;
+	}
+}
+
+export class PluginInputDispatcher {
+	private readonly keyMap = new Map<string, InputAction>();
+	private readonly target: EventTarget;
+	private readonly onAction: (action: InputAction) => void;
+
+	private readonly handleKeyDown = (event: Event): void => {
+		const e = event as KeyboardEvent;
+		if (
+			e.target instanceof HTMLInputElement ||
+			e.target instanceof HTMLTextAreaElement
+		)
+			return;
+		const action =
+			this.keyMap.get(e.key) ?? this.keyMap.get(e.key.toLowerCase());
+		if (action === undefined) return;
+		e.preventDefault();
+		this.onAction(action);
+	};
+
+	constructor(
+		controls: readonly { action: string; defaultKeys: readonly string[] }[],
+		target: EventTarget,
+		onAction: (action: InputAction) => void,
+	) {
+		this.target = target;
+		this.onAction = onAction;
+		for (const binding of controls) {
+			for (const key of binding.defaultKeys) {
+				this.keyMap.set(key, binding.action as InputAction);
+				this.keyMap.set(key.toLowerCase(), binding.action as InputAction);
+			}
+		}
+		this.target.addEventListener('keydown', this.handleKeyDown);
+	}
+
+	public dispose(): void {
+		this.target.removeEventListener('keydown', this.handleKeyDown);
 	}
 }

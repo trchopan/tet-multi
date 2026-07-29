@@ -49,8 +49,11 @@ import {
 } from './session';
 import { sendServerMessage } from './socket-sender';
 
+import { gameRegistry, type GameEngine } from '../games';
+
 export interface RoomOptions {
 	readonly code: string;
+	readonly gameType?: string;
 	readonly now?: () => number;
 	readonly createId?: () => string;
 	readonly createSeed?: () => string;
@@ -75,6 +78,7 @@ const MATCH_COUNTDOWN_MS = 3000;
 
 export class Room {
 	readonly code: string;
+	readonly gameType: string;
 	readonly createdAt: number;
 	private readonly now: () => number;
 	private readonly createId: () => string;
@@ -92,6 +96,7 @@ export class Room {
 	private winnerPlayerIds?: string[];
 	private match?: MatchState;
 	private readonly engines = new Map<string, GameEngineState>();
+	private genericEngine?: GameEngine;
 	private readonly inputQueues = new Map<string, QueuedInput[]>();
 	private readonly botControllers = new Map<string, BotController>();
 	private readonly lastProcessedInput = new Map<string, number>();
@@ -107,6 +112,7 @@ export class Room {
 
 	constructor(options: RoomOptions) {
 		this.code = options.code;
+		this.gameType = options.gameType ?? 'falling-blocks';
 		this.now = options.now ?? Date.now;
 		this.createId = options.createId ?? (() => crypto.randomUUID());
 		this.createSeed = options.createSeed ?? (() => crypto.randomUUID());
@@ -321,11 +327,23 @@ export class Room {
 				this.matchSeed,
 				this.players.map((session) => session.playerId),
 			);
+			if (gameRegistry.has(this.gameType)) {
+				this.genericEngine = gameRegistry.get(this.gameType).createEngine({
+					matchId: this.matchId,
+					seed: this.matchSeed,
+					players: this.players.map((session) => ({
+						playerId: session.playerId,
+						displayName: session.displayName,
+					})),
+				});
+			}
 			for (const [rosterIndex, session] of this.players.entries()) {
-				this.engines.set(
-					session.playerId,
-					createEngineState(this.matchSeed, rosterIndex),
-				);
+				if (this.gameType === 'falling-blocks') {
+					this.engines.set(
+						session.playerId,
+						createEngineState(this.matchSeed, rosterIndex),
+					);
+				}
 				const matchPlayer = this.match.players[rosterIndex];
 				if (matchPlayer !== undefined)
 					matchPlayer.connected = session.connected;
@@ -334,7 +352,10 @@ export class Room {
 				this.lastProcessedInput.set(session.playerId, 0);
 				this.lastAcceptedInput.set(session.playerId, 0);
 				this.attackSent.set(session.playerId, 0);
-				if (session.playerType === 'computer')
+				if (
+					this.gameType === 'falling-blocks' &&
+					session.playerType === 'computer'
+				)
 					this.botControllers.set(
 						session.playerId,
 						createBotController(
@@ -403,12 +424,16 @@ export class Room {
 		const snapshot: RoomSnapshot = {
 			protocolVersion: PROTOCOL_VERSION,
 			roomCode: this.code,
+			gameType: this.gameType,
 			phase: this.phase,
 			hostPlayerId: this.hostPlayerId,
 			serverTick: this.serverTick,
 			serverTime,
 			players: this.players.map((session) => this.playerSnapshot(session)),
 		};
+		if (this.genericEngine) {
+			snapshot.customGameState = this.genericEngine.getPublicSnapshot();
+		}
 		if (this.countdownEndsAt !== undefined)
 			snapshot.countdownEndsAt = this.countdownEndsAt;
 		if (this.matchId !== undefined) snapshot.matchId = this.matchId;
@@ -460,6 +485,51 @@ export class Room {
 	}
 
 	private simulateTick(now: number): void {
+		if (this.gameType !== 'falling-blocks' && this.genericEngine) {
+			this.serverTick += 1;
+			const inputsToProcess: {
+				playerId: string;
+				sequence: number;
+				action: any;
+			}[] = [];
+			for (const session of this.players) {
+				const queue = this.inputQueues.get(session.playerId);
+				if (queue && queue.length > 0) {
+					while (queue.length > 0) {
+						const input = queue.shift()!;
+						inputsToProcess.push({
+							playerId: session.playerId,
+							sequence: input.sequence,
+							action: input.action,
+						});
+						this.lastProcessedInput.set(session.playerId, input.sequence);
+					}
+				}
+			}
+			this.genericEngine.tick(this.serverTick, inputsToProcess);
+
+			const summaries = this.genericEngine.getPlayerSummaries();
+			for (const [id, summary] of summaries) {
+				const session = this.sessions.get(id);
+				if (session) {
+					session.matchState = summary.matchState;
+				}
+			}
+
+			if (this.genericEngine.isFinished()) {
+				this.phase = 'finished';
+				this.winnerPlayerIds = this.genericEngine.getWinners();
+			}
+
+			if (
+				this.phase === 'playing' &&
+				this.serverTick % NORMAL_SNAPSHOT_INTERVAL_TICKS === 0
+			) {
+				this.broadcast({ type: 'room_snapshot', snapshot: this.snapshot(now) });
+			}
+			return;
+		}
+
 		this.serverTick += 1;
 		const eliminated: string[] = [];
 		const ordered = this.players.filter(
@@ -612,6 +682,19 @@ export class Room {
 				? {}
 				: { eliminatedAtTick: player.eliminatedAtTick }),
 		};
+		if (this.genericEngine) {
+			const summary = this.genericEngine
+				.getPlayerSummaries()
+				.get(session.playerId);
+			if (summary) {
+				if (summary.score !== undefined) snapshot.score = summary.score;
+				if (summary.placement !== undefined)
+					snapshot.placement = summary.placement;
+				if (summary.eliminatedAtTick !== undefined)
+					snapshot.eliminatedAtTick = summary.eliminatedAtTick;
+				if (summary.board !== undefined) snapshot.board = summary.board;
+			}
+		}
 		if (engine !== undefined) {
 			snapshot.board = serializeBoard(engine.board);
 			snapshot.activePiece = { ...engine.activePiece };

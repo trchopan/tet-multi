@@ -1,19 +1,35 @@
 <script lang="ts">
-	import type { InputAction, PlayerSnapshot } from '../../shared/types';
+	import type {
+		InputAction,
+		PlayerSnapshot,
+		RoomSnapshot,
+	} from '../../shared/types';
+	import { gameRegistry } from '../../games';
 	import PlayerCard from './PlayerCard.svelte';
+	import SharedCanvas from './SharedCanvas.svelte';
 
 	let {
 		players,
 		localPlayerId,
+		snapshot,
 		onInput,
 		renderPlayer,
 	}: {
 		players: PlayerSnapshot[];
 		localPlayerId: string;
+		snapshot?: RoomSnapshot;
 		onInput: ((action: InputAction) => void) | undefined;
 		renderPlayer: (player: PlayerSnapshot) => PlayerSnapshot;
 	} = $props();
+
 	let showOpponents = $state(false);
+
+	const gameType = $derived(snapshot?.gameType ?? 'falling-blocks');
+	const plugin = $derived(
+		gameRegistry.has(gameType) ? gameRegistry.get(gameType) : undefined,
+	);
+	const isSharedCanvas = $derived(plugin?.viewMode === 'shared-canvas');
+
 	const localPlayer = $derived(
 		players.find((player) => player.playerId === localPlayerId),
 	);
@@ -22,50 +38,54 @@
 	);
 </script>
 
-<section class="game-view" aria-label="Multiplayer game boards">
-	<div class="mobile-controls">
-		<button
-			type="button"
-			aria-label={showOpponents ? 'Hide opponents' : 'Show opponents'}
-			title={showOpponents ? 'Hide opponents' : 'Show opponents'}
-			aria-expanded={showOpponents}
-			aria-controls="opponent-boards"
-			onclick={() => (showOpponents = !showOpponents)}
-		>
-			<svg viewBox="0 0 24 24" aria-hidden="true">
-				<path
-					d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6-1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 21a7 7 0 0 1 14 0H2Zm13.5-5.8A6.8 6.8 0 0 1 18 21h4a5 5 0 0 0-6.5-5.8Z"
-				/>
-			</svg>
-		</button>
-	</div>
-	<div class="game-layout">
-		<div class="local-column">
-			{#if localPlayer !== undefined}
-				<PlayerCard player={renderPlayer(localPlayer)} local {onInput} />
-			{/if}
-		</div>
-		<aside
-			id="opponent-boards"
-			class="opponents"
-			class:visible={showOpponents}
-			aria-label="Opponent boards"
-		>
-			<div class="opponents-heading">
-				<span>Opponents</span>
-				<span>{opponents.length}</span>
-			</div>
-			<div class="opponent-list">
-				{#each opponents as player (player.playerId)}
-					<PlayerCard
-						player={renderPlayer(player)}
-						compact
-						onInput={undefined}
+<section class="game-view" aria-label="Multiplayer game arena">
+	{#if isSharedCanvas && snapshot}
+		<SharedCanvas {snapshot} local={true} {onInput} />
+	{:else}
+		<div class="mobile-controls">
+			<button
+				type="button"
+				aria-label={showOpponents ? 'Hide opponents' : 'Show opponents'}
+				title={showOpponents ? 'Hide opponents' : 'Show opponents'}
+				aria-expanded={showOpponents}
+				aria-controls="opponent-boards"
+				onclick={() => (showOpponents = !showOpponents)}
+			>
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<path
+						d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6-1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 21a7 7 0 0 1 14 0H2Zm13.5-5.8A6.8 6.8 0 0 1 18 21h4a5 5 0 0 0-6.5-5.8Z"
 					/>
-				{/each}
+				</svg>
+			</button>
+		</div>
+		<div class="game-layout">
+			<div class="local-column">
+				{#if localPlayer !== undefined}
+					<PlayerCard player={renderPlayer(localPlayer)} local {onInput} />
+				{/if}
 			</div>
-		</aside>
-	</div>
+			<aside
+				id="opponent-boards"
+				class="opponents"
+				class:visible={showOpponents}
+				aria-label="Opponent boards"
+			>
+				<div class="opponents-heading">
+					<span>Opponents</span>
+					<span>{opponents.length}</span>
+				</div>
+				<div class="opponent-list">
+					{#each opponents as player (player.playerId)}
+						<PlayerCard
+							player={renderPlayer(player)}
+							compact
+							onInput={undefined}
+						/>
+					{/each}
+				</div>
+			</aside>
+		</div>
+	{/if}
 </section>
 
 <style>
@@ -98,69 +118,48 @@
 		overflow-x: hidden;
 		overflow-y: auto;
 		scrollbar-gutter: stable;
-		padding: 0.85rem;
-		border-radius: 0.8rem;
-		background: rgba(20, 18, 38, 0.72);
+		border: 1px solid rgba(255, 255, 255, 0.16);
+		border-radius: 0.85rem;
+		background: rgba(16, 18, 28, 0.88);
+		padding: 0.75rem;
 	}
 	.opponents-heading {
 		display: flex;
 		justify-content: space-between;
-		margin-bottom: 0.6rem;
-		color: #aaa5c0;
-		font-size: 0.72rem;
-		font-weight: 800;
-		letter-spacing: 0.12em;
+		padding-bottom: 0.5rem;
+		margin-bottom: 0.5rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
 		text-transform: uppercase;
+		color: #94a3b8;
 	}
 	.opponent-list {
-		display: grid;
-		gap: 0.6rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
 	}
 	.mobile-controls {
 		display: none;
 	}
-	@media (max-width: 760px) {
-		.game-view {
-			display: grid;
-			grid-template-rows: auto minmax(0, 1fr);
-			gap: 0.35rem;
-		}
-		.game-layout {
-			height: auto;
-			grid-template-columns: minmax(0, 1fr);
-		}
-		.local-column {
-			max-width: 34rem;
-		}
-		.opponents {
-			overflow: auto;
-		}
+	@media (max-width: 768px) {
 		.mobile-controls {
 			display: flex;
 			justify-content: flex-end;
-			margin-bottom: 0.35rem;
+			margin-bottom: 0.5rem;
 		}
-		.mobile-controls button {
-			display: grid;
-			place-items: center;
-			width: 2.5rem;
-			height: 2.5rem;
-			padding: 0;
-			border: 1px solid #68627e;
-			border-radius: 0.65rem;
-			background: #18162a;
-			color: #f4f1ff;
-			font: inherit;
-			font-weight: 800;
-			cursor: pointer;
+		.game-layout {
+			grid-template-columns: 1fr;
 		}
-		.mobile-controls svg {
-			width: 1.25rem;
-			height: 1.25rem;
-			fill: currentColor;
-		}
-		.opponents:not(.visible) {
+		.opponents {
 			display: none;
+		}
+		.opponents.visible {
+			display: block;
+			position: fixed;
+			inset: 4rem 1rem 1rem;
+			z-index: 50;
 		}
 	}
 </style>

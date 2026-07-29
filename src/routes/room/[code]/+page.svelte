@@ -35,10 +35,10 @@
 		};
 	});
 
-	const connect = (displayName: string): void => {
+	const connect = (displayName: string, gameType = 'falling-blocks'): void => {
 		name = displayName;
 		saveDisplayName(displayName);
-		if (createMode) session.createRoom(displayName);
+		if (createMode) session.createRoom(displayName, gameType);
 		else session.joinRoom(code, displayName);
 		joined = true;
 	};
@@ -75,6 +75,7 @@
 				: 'Choose your display name to enter the waiting room.'}
 			submitLabel={createMode ? 'Create room' : 'Join room'}
 			initialName={name}
+			isCreateMode={createMode}
 			onSubmit={connect}
 		/>
 	{:else if session.snapshot === undefined}
@@ -140,6 +141,7 @@
 			<GameGrid
 				players={session.snapshot.players}
 				localPlayerId={session.playerId}
+				snapshot={session.snapshot}
 				onInput={session.snapshot.phase === 'playing' ? input : undefined}
 				renderPlayer={(player) => session.renderPlayer(player, now)}
 			/>

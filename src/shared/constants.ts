@@ -36,6 +36,14 @@ export const SNAPSHOT_CELL_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8] as const;
 export const PIECE_KINDS = ['I', 'J', 'L', 'O', 'S', 'T', 'Z'] as const;
 
 export const INPUT_ACTIONS = [
+	'up',
+	'down',
+	'left',
+	'right',
+	'button_a',
+	'button_b',
+	'button_x',
+	'button_y',
 	'move_left',
 	'move_right',
 	'soft_drop',

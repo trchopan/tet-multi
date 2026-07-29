@@ -194,6 +194,7 @@ const dispatch = (
 			socket.data.clientId ?? '',
 			message.displayName,
 			socket,
+			message.gameType,
 		);
 		options.logger?.info('room_created', { roomCode: created.room.code });
 		socket.data.session = created.session;

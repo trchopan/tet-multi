@@ -1,24 +1,30 @@
 <script lang="ts">
 	import { validateDisplayName } from '../client/name';
+	import { gameRegistry } from '../../games';
 
 	let {
 		title,
 		description,
 		submitLabel,
 		initialName = '',
+		isCreateMode = false,
 		onSubmit,
 	}: {
 		title: string;
 		description: string;
 		submitLabel: string;
 		initialName?: string;
-		onSubmit: (displayName: string) => void;
+		isCreateMode?: boolean;
+		onSubmit: (displayName: string, gameType?: string) => void;
 	} = $props();
 
 	let displayName = $state('');
+	let selectedGame = $state('falling-blocks');
 	let error = $state('');
 	let initialized = false;
 	let nameEdited = false;
+	const availableGames = gameRegistry.getAll();
+
 	$effect(() => {
 		if (!initialized || (!nameEdited && initialName.length > 0)) {
 			displayName = initialName;
@@ -34,12 +40,12 @@
 		}
 		const value = displayName.trim();
 		error = '';
-		onSubmit(value);
+		onSubmit(value, isCreateMode ? selectedGame : undefined);
 	};
 </script>
 
 <section class="entry-card" aria-labelledby="entry-title">
-	<p class="eyebrow">Multiplayer falling-block arena</p>
+	<p class="eyebrow">Multiplayer Arena</p>
 	<h1 id="entry-title">{title}</h1>
 	<p class="lede">{description}</p>
 
@@ -55,6 +61,18 @@
 	<p id="display-name-help" class="field-help">
 		1–20 visible Unicode characters
 	</p>
+
+	{#if isCreateMode}
+		<label for="game-select">Select Game Plugin</label>
+		<select id="game-select" bind:value={selectedGame}>
+			{#each availableGames as game}
+				<option value={game.id}>{game.name} ({game.viewMode})</option>
+			{/each}
+		</select>
+		<p class="field-help">
+			{availableGames.find((g) => g.id === selectedGame)?.description ?? ''}
+		</p>
+	{/if}
 
 	<button type="button" onclick={submit}>{submitLabel}</button>
 	<p class="error" aria-live="polite">{error}</p>
@@ -93,8 +111,11 @@
 	}
 	label {
 		font-size: 0.85rem;
+		display: block;
+		margin-top: 0.5rem;
 	}
-	input {
+	input,
+	select {
 		width: 100%;
 		margin: 0.4rem 0 1rem;
 		padding: 0.8rem;
@@ -106,24 +127,15 @@
 	}
 	button {
 		width: 100%;
-		padding: 0.8rem 1rem;
+		padding: 1rem;
 		border: 0;
 		border-radius: 0.5rem;
-		background: #ffe66d;
-		color: #10121c;
-		font: inherit;
-		font-weight: 800;
+		background: #6c5ce7;
+		color: #fff;
+		font-weight: 700;
 		cursor: pointer;
 	}
-	.error {
-		min-height: 1.2rem;
-		color: #ff9f9f;
-		letter-spacing: 0;
-		text-transform: none;
-	}
-	button:focus-visible,
-	input:focus-visible {
-		outline: 3px solid #f4f1ff;
-		outline-offset: 2px;
+	button:hover {
+		background: #5b4bc4;
 	}
 </style>
