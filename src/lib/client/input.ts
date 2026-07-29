@@ -34,28 +34,28 @@ export interface PointerEventTarget {
 }
 
 const keyActions: Readonly<Record<string, InputAction>> = {
-	ArrowLeft: 'move_left',
-	a: 'move_left',
-	A: 'move_left',
-	ArrowRight: 'move_right',
-	d: 'move_right',
-	D: 'move_right',
-	ArrowDown: 'soft_drop',
-	s: 'soft_drop',
-	S: 'soft_drop',
-	' ': 'hard_drop',
-	w: 'hard_drop',
-	W: 'hard_drop',
-	ArrowUp: 'rotate_cw',
-	x: 'rotate_cw',
-	X: 'rotate_cw',
-	z: 'rotate_ccw',
-	Z: 'rotate_ccw',
-	q: 'rotate_ccw',
-	Q: 'rotate_ccw',
-	c: 'hold',
-	C: 'hold',
-	Shift: 'hold',
+	ArrowLeft: 'left',
+	a: 'left',
+	A: 'left',
+	ArrowRight: 'right',
+	d: 'right',
+	D: 'right',
+	ArrowDown: 'down',
+	s: 'down',
+	S: 'down',
+	' ': 'button_a',
+	w: 'button_a',
+	W: 'button_a',
+	ArrowUp: 'button_x',
+	x: 'button_x',
+	X: 'button_x',
+	z: 'button_b',
+	Z: 'button_b',
+	q: 'button_b',
+	Q: 'button_b',
+	c: 'button_y',
+	C: 'button_y',
+	Shift: 'button_y',
 	j: 'button_a',
 	J: 'button_a',
 	k: 'button_b',
@@ -66,12 +66,7 @@ const keyActions: Readonly<Record<string, InputAction>> = {
 	I: 'button_y',
 };
 
-const horizontalActions = new Set<InputAction>([
-	'move_left',
-	'move_right',
-	'left',
-	'right',
-]);
+const horizontalActions = new Set<InputAction>(['left', 'right']);
 
 export const mapKeyToAction = (key: string): InputAction | undefined =>
 	keyActions[key];
@@ -141,7 +136,7 @@ export class KeyboardInput {
 			}
 		}
 		for (const pressed of this.pressed.values()) {
-			if (pressed.action !== 'soft_drop') continue;
+			if (pressed.action !== 'down') continue;
 			pressed.elapsedMs += elapsedMs;
 			while (pressed.elapsedMs >= SOFT_DROP_MS) {
 				pressed.elapsedMs -= SOFT_DROP_MS;
@@ -198,7 +193,7 @@ export class SwipeInput {
 
 		if (distanceX >= distanceY * SWIPE_AXIS_RATIO) {
 			this.lastDownSwipeAt = undefined;
-			this.emit(dx < 0 ? 'move_left' : 'move_right');
+			this.emit(dx < 0 ? 'left' : 'right');
 			return;
 		}
 		if (distanceY < distanceX * SWIPE_AXIS_RATIO) {
@@ -207,7 +202,7 @@ export class SwipeInput {
 		}
 		if (dy < 0) {
 			this.lastDownSwipeAt = undefined;
-			this.emit('rotate_cw');
+			this.emit('button_x');
 			return;
 		}
 
@@ -217,7 +212,7 @@ export class SwipeInput {
 			now >= this.lastDownSwipeAt &&
 			now - this.lastDownSwipeAt <= DOUBLE_SWIPE_MS;
 		this.lastDownSwipeAt = isDoubleSwipe ? undefined : now;
-		this.emit(isDoubleSwipe ? 'hard_drop' : 'soft_drop');
+		this.emit(isDoubleSwipe ? 'button_a' : 'down');
 	};
 
 	private readonly handlePointerCancel = (event: Event): void => {

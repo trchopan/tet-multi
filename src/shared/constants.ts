@@ -44,13 +44,6 @@ export const INPUT_ACTIONS = [
 	'button_b',
 	'button_x',
 	'button_y',
-	'move_left',
-	'move_right',
-	'soft_drop',
-	'hard_drop',
-	'rotate_cw',
-	'rotate_ccw',
-	'hold',
 ] as const;
 
 export const ROOM_PHASES = [

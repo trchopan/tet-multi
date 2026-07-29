@@ -18,7 +18,7 @@ const collectActions = (seed: string): string[] => {
 	for (let tick = 0; tick < 80; tick += 1) {
 		const action = nextBotAction(controller, engine);
 		if (action !== undefined) actions.push(action);
-		if (actions.at(-1) === 'hard_drop') break;
+		if (actions.at(-1) === 'button_a') break;
 	}
 	return actions;
 };
@@ -85,7 +85,7 @@ describe('computer player policy', () => {
 					const action = nextBotAction(controller, engine);
 					if (action !== undefined) {
 						applyInput(engine, action, false);
-						if (action === 'hard_drop') hardDrops += 1;
+						if (action === 'button_a') hardDrops += 1;
 					}
 					advanceTicks(engine, 1, false);
 				}
@@ -126,7 +126,7 @@ describe('computer player policy', () => {
 	test('produces deterministic delayed placement actions', () => {
 		const first = collectActions('bot-seed');
 		expect(first).toEqual(collectActions('bot-seed'));
-		expect(first.at(-1)).toBe('hard_drop');
+		expect(first.at(-1)).toBe('button_a');
 		expect(first.length).toBeGreaterThan(1);
 	});
 
@@ -146,7 +146,7 @@ describe('computer player policy', () => {
 			advanceTicks(engine, 1, false);
 		}
 		const decisionCount = controller.decisionCount;
-		applyInput(engine, 'hard_drop', false);
+		applyInput(engine, 'button_a', false);
 		const actionAfterExternalLock = nextBotAction(controller, engine);
 		const freshController = createBotController();
 		freshController.cooldown = 0;
@@ -157,7 +157,7 @@ describe('computer player policy', () => {
 
 	test('clears all timing state when a planned action is rejected', () => {
 		const controller = createBotController();
-		controller.plan = ['move_left'];
+		controller.plan = ['left'];
 		controller.cooldown = 12;
 		controller.actionCooldown = 2;
 		controller.plannedPieceKey = 'planned-piece';
@@ -176,7 +176,7 @@ describe('computer player policy', () => {
 			const action = nextBotAction(controller, engine);
 			if (action === undefined) continue;
 			applyInput(engine, action, false);
-			if (action === 'hard_drop') hardDrops += 1;
+			if (action === 'button_a') hardDrops += 1;
 			expect(engine.gameOver).toBe(false);
 		}
 		expect(hardDrops).toBe(5);
@@ -191,11 +191,11 @@ describe('computer player policy', () => {
 			if (action !== undefined) {
 				actions.push(action);
 				applyInput(engine, action, false);
-				if (action === 'hard_drop') break;
+				if (action === 'button_a') break;
 			}
 			advanceTicks(engine, 1, false);
 		}
-		expect(actions[0]).toBe('hold');
+		expect(actions[0]).toBe('button_y');
 	});
 
 	test('survives a sustained deterministic run across multiple seeds', () => {
@@ -207,7 +207,7 @@ describe('computer player policy', () => {
 				const action = nextBotAction(controller, engine);
 				if (action !== undefined) {
 					applyInput(engine, action, false);
-					if (action === 'hard_drop') hardDrops += 1;
+					if (action === 'button_a') hardDrops += 1;
 				}
 				advanceTicks(engine, 1, false);
 			}
@@ -232,7 +232,7 @@ describe('computer player policy', () => {
 			const action = nextBotAction(controller, engine);
 			if (action !== undefined) {
 				applyInput(engine, action, false);
-				if (action === 'hard_drop') hardDrops += 1;
+				if (action === 'button_a') hardDrops += 1;
 				resolvePlacement();
 			}
 			advanceTicks(engine, 1, false);

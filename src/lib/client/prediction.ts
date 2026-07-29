@@ -11,7 +11,7 @@ export interface PendingInput {
 	action: InputAction;
 }
 
-const authoritativeActions = new Set<InputAction>(['hard_drop', 'hold']);
+const authoritativeActions = new Set<InputAction>(['button_a', 'button_y']);
 
 export const isPredictableInput = (action: InputAction): boolean =>
 	!authoritativeActions.has(action);

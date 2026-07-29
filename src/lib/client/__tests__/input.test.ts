@@ -113,20 +113,20 @@ class FakePointerTarget implements PointerEventTarget {
 describe('local keyboard input', () => {
 	test('maps primary and alternate controls', () => {
 		const expected: Array<[string, InputAction]> = [
-			['ArrowLeft', 'move_left'],
-			['a', 'move_left'],
-			['ArrowRight', 'move_right'],
-			['d', 'move_right'],
-			['ArrowDown', 'soft_drop'],
-			['s', 'soft_drop'],
-			[' ', 'hard_drop'],
-			['w', 'hard_drop'],
-			['ArrowUp', 'rotate_cw'],
-			['x', 'rotate_cw'],
-			['z', 'rotate_ccw'],
-			['q', 'rotate_ccw'],
-			['c', 'hold'],
-			['Shift', 'hold'],
+			['ArrowLeft', 'left'],
+			['a', 'left'],
+			['ArrowRight', 'right'],
+			['d', 'right'],
+			['ArrowDown', 'down'],
+			['s', 'down'],
+			[' ', 'button_a'],
+			['w', 'button_a'],
+			['ArrowUp', 'button_x'],
+			['x', 'button_x'],
+			['z', 'button_b'],
+			['q', 'button_b'],
+			['c', 'button_y'],
+			['Shift', 'button_y'],
 		];
 		for (const [key, action] of expected)
 			expect(mapKeyToAction(key)).toBe(action);
@@ -138,7 +138,7 @@ describe('local keyboard input', () => {
 		const input = new KeyboardInput(target, (action) => actions.push(action));
 		expect(target.dispatch('keydown', ' ')).toBe(true);
 		expect(target.dispatch('keydown', ' ')).toBe(true);
-		expect(actions).toEqual(['hard_drop']);
+		expect(actions).toEqual(['button_a']);
 		input.dispose();
 		expect(target.dispatch('keydown', 'x')).toBe(false);
 	});
@@ -148,15 +148,15 @@ describe('local keyboard input', () => {
 		const actions: InputAction[] = [];
 		const input = new KeyboardInput(target, (action) => actions.push(action));
 		target.dispatch('keydown', 'ArrowRight');
-		expect(actions).toEqual(['move_right']);
+		expect(actions).toEqual(['right']);
 		input.update(139);
 		expect(actions).toHaveLength(1);
 		input.update(41);
-		expect(actions).toEqual(['move_right', 'move_right', 'move_right']);
+		expect(actions).toEqual(['right', 'right', 'right']);
 		target.dispatch('keyup', 'ArrowRight');
 		target.dispatch('keydown', 'ArrowDown');
 		input.update(35);
-		expect(actions.at(-1)).toBe('soft_drop');
+		expect(actions.at(-1)).toBe('down');
 		input.dispose();
 	});
 
@@ -167,7 +167,7 @@ describe('local keyboard input', () => {
 		target.dispatch('keydown', 'ArrowLeft');
 		target.dispatch('keydown', 'ArrowRight');
 		input.update(140);
-		expect(actions.at(-1)).toBe('move_right');
+		expect(actions.at(-1)).toBe('right');
 		input.dispose();
 	});
 });
@@ -194,10 +194,10 @@ describe('local swipe input', () => {
 		swipe(target, [100, 100], [100, 160]);
 
 		expect(actions).toEqual([
-			'move_left',
-			'move_right',
-			'rotate_cw',
-			'soft_drop',
+			'left',
+			'right',
+			'button_x',
+			'down',
 		]);
 		expect(target.focused).toBe(true);
 		input.dispose();
@@ -218,7 +218,7 @@ describe('local swipe input', () => {
 		});
 		target.dispatch('pointerup', 3, 40, 100, { isPrimary: false });
 
-		expect(actions).toEqual(['move_left']);
+		expect(actions).toEqual(['left']);
 		input.dispose();
 	});
 
@@ -251,7 +251,7 @@ describe('local swipe input', () => {
 		now = 1_301;
 		swipe(target, [100, 100], [100, 160]);
 
-		expect(actions).toEqual(['soft_drop', 'hard_drop', 'soft_drop']);
+		expect(actions).toEqual(['down', 'button_a', 'down']);
 		input.dispose();
 	});
 
@@ -269,7 +269,7 @@ describe('local swipe input', () => {
 		now = 1_301;
 		swipe(target, [100, 100], [100, 160]);
 
-		expect(actions).toEqual(['soft_drop', 'soft_drop']);
+		expect(actions).toEqual(['down', 'down']);
 		input.dispose();
 	});
 
@@ -289,7 +289,7 @@ describe('local swipe input', () => {
 		now = 1_100;
 		swipe(target, [100, 100], [100, 160], 3);
 
-		expect(actions).toEqual(['soft_drop', 'soft_drop']);
+		expect(actions).toEqual(['down', 'down']);
 		input.dispose();
 	});
 
@@ -309,7 +309,7 @@ describe('local swipe input', () => {
 		now = 1_200;
 		swipe(target, [100, 100], [100, 160]);
 
-		expect(actions).toEqual(['soft_drop', 'move_left', 'soft_drop']);
+		expect(actions).toEqual(['down', 'left', 'down']);
 		input.dispose();
 	});
 
@@ -330,6 +330,6 @@ describe('local swipe input', () => {
 		input.dispose();
 		expect(target.hasPointerCapture(4)).toBe(false);
 
-		expect(actions).toEqual(['move_left']);
+		expect(actions).toEqual(['left']);
 	});
 });
