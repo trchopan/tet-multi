@@ -8,8 +8,8 @@ import {
 	hashEngineState,
 	resolveReadyGarbage,
 	takeLastPlacement,
-} from '../game/engine';
-import { createBotController, invalidateBotPlan, nextBotAction } from './bot';
+} from '../core-engine';
+import { createBotController, invalidateBotPlan, nextBotAction } from '../bot';
 
 const collectActions = (seed: string): string[] => {
 	const engine = createEngineState(seed, 0);

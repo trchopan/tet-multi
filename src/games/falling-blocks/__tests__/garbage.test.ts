@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { BOARD_INTERNAL_HEIGHT, BOARD_WIDTH } from '../../shared/constants';
+import { BOARD_INTERNAL_HEIGHT, BOARD_WIDTH } from '../../../shared/constants';
 import { addGarbage, createEmptyBoard, getCell, setCell } from '../board';
 import {
 	cancelIncomingGarbage,
@@ -11,7 +11,7 @@ import {
 	resolveReadyGarbage,
 	serializeEngineState,
 	deserializeEngineState,
-} from '../engine';
+} from '../core-engine';
 import {
 	cancelGarbage,
 	createGarbagePacket,

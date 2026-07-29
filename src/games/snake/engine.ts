@@ -14,7 +14,7 @@ import {
 	createRandomState,
 	nextRandom,
 	type RandomState,
-} from '../../game/random';
+} from '../../shared/random';
 
 const GRID_WIDTH = 40;
 const GRID_HEIGHT = 30;
@@ -254,6 +254,35 @@ export class SnakeGameEngine implements GameEngine<
 				this.winners = [];
 			}
 		} else if (remaining.length <= 1) {
+			this.isGameOver = true;
+			if (remaining.length === 1) {
+				const winner = remaining[0]!;
+				winner.placement = 1;
+				this.winners = [winner.playerId];
+			} else {
+				this.winners = [];
+			}
+		}
+	}
+
+	public eliminatePlayers(playerIds: readonly string[]): void {
+		if (this.isGameOver) return;
+		for (const id of playerIds) {
+			const player = this.players.get(id);
+			if (player && player.matchState === 'playing') {
+				player.matchState = 'eliminated';
+				for (const seg of player.body) {
+					if (nextRandom(this.rng) > 0.5) {
+						this.food.push({ ...seg });
+					}
+				}
+			}
+		}
+		this.ensureFood();
+		const remaining = Array.from(this.players.values()).filter(
+			(p) => p.matchState === 'playing',
+		);
+		if (remaining.length <= 1) {
 			this.isGameOver = true;
 			if (remaining.length === 1) {
 				const winner = remaining[0]!;

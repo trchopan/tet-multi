@@ -13,8 +13,8 @@ import {
 	holdPiece,
 	softDrop,
 	serializeEngineState,
-} from '../engine';
-import { BOARD_WIDTH } from '../../shared/constants';
+} from '../core-engine';
+import { BOARD_WIDTH } from '../../../shared/constants';
 import { setCell } from '../board';
 
 describe('deterministic engine foundation', () => {

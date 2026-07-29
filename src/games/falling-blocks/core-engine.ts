@@ -4,8 +4,8 @@ import {
 	BOARD_WIDTH,
 	NEXT_PREVIEW_COUNT,
 	SNAPSHOT_CELL_VALUES,
-} from '../shared/constants';
-import type { InputAction, PieceKind } from '../shared/types';
+} from '../../shared/constants';
+import type { InputAction, PieceKind } from '../../shared/types';
 import {
 	canPlacePiece,
 	clearLines,
@@ -29,7 +29,7 @@ import {
 	createSevenBag,
 	drawPiece,
 	type SevenBagState,
-} from './random';
+} from './seven-bag';
 import { getPieceDefinition, isPieceKind, type PieceRotation } from './pieces';
 import { getKickTests } from './rotation';
 import { detectTSpin, scorePlacement, type PlacementScore } from './scoring';

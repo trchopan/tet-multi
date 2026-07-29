@@ -4,7 +4,7 @@ import { Room } from './room';
 import { RoomManager } from './room-manager';
 import type { SocketLike } from './session';
 import { validateServerMessage } from '../shared/protocol';
-import type { GameEngineState } from '../game/engine';
+import type { GameEngineState } from '../games/falling-blocks/core-engine';
 import { reconnectTokensEqual } from './session';
 
 class FakeSocket implements SocketLike {

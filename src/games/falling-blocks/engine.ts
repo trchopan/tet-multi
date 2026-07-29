@@ -13,7 +13,7 @@ import {
 	enqueueGarbagePacket,
 	resolveReadyGarbage,
 	type GameEngineState,
-} from '../../game/engine';
+} from './core-engine';
 import {
 	createAttackPacket,
 	createMatchState,
@@ -21,14 +21,14 @@ import {
 	retargetAttackPackets,
 	type AttackPacket,
 	type MatchState,
-} from '../../game/match';
+} from './match';
 import {
 	createBotController,
 	invalidateBotPlan,
 	nextBotAction,
 	type BotController,
-} from '../../server/bot';
-import { serializeBoard } from '../../game/board';
+} from './bot';
+import { serializeBoard } from './board';
 import type { InputAction } from '../../shared/types';
 
 export class FallingBlocksGameEngine implements GameEngine<
