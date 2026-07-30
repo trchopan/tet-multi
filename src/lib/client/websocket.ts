@@ -60,8 +60,10 @@ export class MultiplayerWebSocket {
 	public constructor(private readonly options: WebSocketClientOptions) {
 		this.now = options.now ?? Date.now;
 		this.random = options.random ?? Math.random;
-		this.schedule = options.setTimeout ?? globalThis.setTimeout;
-		this.cancel = options.clearTimeout ?? globalThis.clearTimeout;
+		this.schedule =
+			options.setTimeout ?? globalThis.setTimeout.bind(globalThis);
+		this.cancel =
+			options.clearTimeout ?? globalThis.clearTimeout.bind(globalThis);
 	}
 
 	public connect(): void {
