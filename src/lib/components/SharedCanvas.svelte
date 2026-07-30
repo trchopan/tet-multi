@@ -21,6 +21,11 @@
 		gameRegistry.has(gameType) ? gameRegistry.get(gameType) : undefined,
 	);
 
+	const currentSnapshot = $derived(snapshot);
+
+	let width = 0;
+	let height = 0;
+
 	onMount(() => {
 		const context = canvas.getContext('2d');
 		if (context === null) return;
@@ -28,16 +33,46 @@
 		const resize = (): void => {
 			const rect = canvas.getBoundingClientRect();
 			const dpr = window.devicePixelRatio || 1;
-			canvas.width = rect.width * dpr;
-			canvas.height = rect.height * dpr;
-			context.setTransform(dpr, 0, 0, dpr, 0, 0);
+			const newW = Math.floor(rect.width * dpr);
+			const newH = Math.floor(rect.height * dpr);
+
+			if (newW > 0 && newH > 0) {
+				if (canvas.width !== newW || canvas.height !== newH) {
+					canvas.width = newW;
+					canvas.height = newH;
+				}
+				context.setTransform(dpr, 0, 0, dpr, 0, 0);
+				width = rect.width;
+				height = rect.height;
+			}
 		};
 
 		const observer = new ResizeObserver(resize);
 		observer.observe(canvas);
 		resize();
 
+		let animId: number;
+		const render = (): void => {
+			if (
+				context &&
+				canvas &&
+				plugin?.client.drawSharedView &&
+				width > 0 &&
+				height > 0
+			) {
+				plugin.client.drawSharedView(context, currentSnapshot, {
+					x: 0,
+					y: 0,
+					width,
+					height,
+				});
+			}
+			animId = requestAnimationFrame(render);
+		};
+		animId = requestAnimationFrame(render);
+
 		return () => {
+			cancelAnimationFrame(animId);
 			observer.disconnect();
 		};
 	});
@@ -56,18 +91,24 @@
 		};
 	});
 
-	$effect(() => {
-		const context = canvas?.getContext('2d');
-		if (context && canvas && plugin?.client.drawSharedView) {
-			const rect = canvas.getBoundingClientRect();
-			plugin.client.drawSharedView(context, snapshot, {
-				x: 0,
-				y: 0,
-				width: rect.width,
-				height: rect.height,
-			});
+	const handleClick = (e: MouseEvent): void => {
+		if (!onInput || !canvas || currentSnapshot.phase !== 'playing') return;
+		const rect = canvas.getBoundingClientRect();
+		const clickY = e.clientY - rect.top;
+		const hudY = rect.height - 65;
+
+		if (clickY >= hudY) {
+			const itemW = rect.width / 5;
+			const clickX = e.clientX - rect.left;
+			const idx = Math.floor(clickX / itemW);
+
+			if (idx === 0) onInput('button_a');
+			else if (idx === 1) onInput('button_b');
+			else if (idx === 2) onInput('button_x');
+			else if (idx === 3) onInput('button_y');
+			else if (idx === 4) onInput('up');
 		}
-	});
+	};
 </script>
 
 <div class="shared-arena-container">
@@ -78,6 +119,7 @@
 	<canvas
 		bind:this={canvas}
 		tabindex={local ? 0 : -1}
+		onclick={handleClick}
 		aria-label={`${plugin?.name ?? 'Game'} Shared Arena`}
 	></canvas>
 	<div class="arena-footer">

@@ -354,7 +354,7 @@ export class Room {
 		return false;
 	}
 
-	snapshot(serverTime = this.now()): RoomSnapshot {
+	snapshot(serverTime = this.now(), targetPlayerId?: string): RoomSnapshot {
 		const snapshot: RoomSnapshot = {
 			protocolVersion: PROTOCOL_VERSION,
 			roomCode: this.code,
@@ -366,7 +366,13 @@ export class Room {
 			players: this.players.map((session) => this.playerSnapshot(session)),
 		};
 		if (this.genericEngine) {
-			snapshot.customGameState = this.genericEngine.getPublicSnapshot();
+			if (targetPlayerId && this.genericEngine.getPrivateSnapshot) {
+				snapshot.customGameState =
+					this.genericEngine.getPrivateSnapshot(targetPlayerId) ??
+					this.genericEngine.getPublicSnapshot();
+			} else {
+				snapshot.customGameState = this.genericEngine.getPublicSnapshot();
+			}
 		}
 		if (this.countdownEndsAt !== undefined)
 			snapshot.countdownEndsAt = this.countdownEndsAt;
@@ -587,6 +593,25 @@ export class Room {
 	}
 
 	private broadcast(message: ServerMessage, replaceable = false): void {
+		if (
+			message.type === 'room_snapshot' &&
+			this.genericEngine?.getPrivateSnapshot
+		) {
+			for (const session of this.sessions.values()) {
+				if (session.connected && session.socket !== undefined) {
+					const privateSnapshot = this.snapshot(
+						message.snapshot.serverTime,
+						session.playerId,
+					);
+					sendServerMessage(
+						session.socket,
+						{ type: 'room_snapshot', snapshot: privateSnapshot },
+						replaceable,
+					);
+				}
+			}
+			return;
+		}
 		for (const session of this.sessions.values()) {
 			if (session.connected && session.socket !== undefined)
 				sendServerMessage(session.socket, message, replaceable);
