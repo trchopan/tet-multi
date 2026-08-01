@@ -15,44 +15,43 @@ export const pokerPlugin: GamePlugin = {
 	controls: [
 		{
 			action: 'button_a',
-			label: 'Check / Call',
-			defaultKeys: ['Space', 'Enter', 'c', '1'],
+			label: 'Check / Call (A)',
+			defaultKeys: ['a', 'A', 'Space'],
 		},
-
 		{
 			action: 'button_b',
-			label: 'Fold',
-			defaultKeys: ['Escape', 'f', 'b', '2'],
+			label: 'Fold (B)',
+			defaultKeys: ['s', 'S'],
 		},
 		{
 			action: 'button_x',
-			label: 'Bet / Raise',
-			defaultKeys: ['r', 'x', '3'],
+			label: 'Bet / Raise (X)',
+			defaultKeys: ['z', 'Z'],
 		},
 		{
 			action: 'button_y',
-			label: 'All-In',
-			defaultKeys: ['y', '4'],
+			label: 'All-In (Y)',
+			defaultKeys: ['c', 'C'],
 		},
 		{
 			action: 'up',
 			label: 'Increase Bet',
-			defaultKeys: ['ArrowUp', 'w'],
+			defaultKeys: ['ArrowUp'],
 		},
 		{
 			action: 'down',
 			label: 'Decrease Bet',
-			defaultKeys: ['ArrowDown', 's'],
+			defaultKeys: ['ArrowDown'],
 		},
 		{
 			action: 'right',
 			label: 'Double Bet',
-			defaultKeys: ['ArrowRight', 'd'],
+			defaultKeys: ['ArrowRight'],
 		},
 		{
 			action: 'left',
 			label: 'Min Bet',
-			defaultKeys: ['ArrowLeft', 'a'],
+			defaultKeys: ['ArrowLeft'],
 		},
 	],
 	createEngine(options) {

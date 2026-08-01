@@ -5,8 +5,10 @@
 		RoomSnapshot,
 	} from '../../shared/types';
 	import { gameRegistry } from '../../games';
+	import { UnifiedInputController } from '../client/input';
 	import PlayerCard from './PlayerCard.svelte';
 	import SharedCanvas from './SharedCanvas.svelte';
+	import VirtualGamepad from './VirtualGamepad.svelte';
 
 	let {
 		players,
@@ -17,12 +19,15 @@
 	}: {
 		players: PlayerSnapshot[];
 		localPlayerId: string;
-		snapshot?: RoomSnapshot;
-		onInput: ((action: InputAction) => void) | undefined;
+		snapshot?: RoomSnapshot | undefined;
+		onInput?: ((action: InputAction) => void) | undefined;
 		renderPlayer: (player: PlayerSnapshot) => PlayerSnapshot;
 	} = $props();
 
 	let showOpponents = $state(false);
+	let showGamepad = $state(false);
+	let activeActions = $state(new Set<InputAction>());
+	let controller: UnifiedInputController | undefined;
 
 	const gameType = $derived(snapshot?.gameType ?? 'falling-blocks');
 	const plugin = $derived(
@@ -36,6 +41,24 @@
 	const opponents = $derived(
 		players.filter((player) => player.playerId !== localPlayerId),
 	);
+
+	$effect(() => {
+		if (isSharedCanvas || onInput === undefined || !plugin) return;
+		controller?.dispose();
+		controller = new UnifiedInputController(
+			plugin.controls,
+			window,
+			onInput,
+			(newSet) => {
+				activeActions = newSet;
+			},
+		);
+
+		return () => {
+			controller?.dispose();
+			controller = undefined;
+		};
+	});
 </script>
 
 <section class="game-view" aria-label="Multiplayer game arena">
@@ -43,6 +66,14 @@
 		<SharedCanvas {snapshot} local={true} {onInput} />
 	{:else}
 		<div class="mobile-controls">
+			<button
+				type="button"
+				class="controller-toggle"
+				onclick={() => (showGamepad = !showGamepad)}
+				aria-label={showGamepad ? 'Hide Controller' : 'Show Controller'}
+			>
+				🎮 Controls
+			</button>
 			<button
 				type="button"
 				aria-label={showOpponents ? 'Hide opponents' : 'Show opponents'}
@@ -61,7 +92,19 @@
 		<div class="game-layout">
 			<div class="local-column">
 				{#if localPlayer !== undefined}
-					<PlayerCard player={renderPlayer(localPlayer)} local {onInput} />
+					<PlayerCard
+						player={renderPlayer(localPlayer)}
+						local
+						{onInput}
+						controls={plugin?.controls}
+						{activeActions}
+						onVirtualAction={(action) =>
+							controller
+								? controller.pressVirtualAction(action)
+								: onInput?.(action)}
+						onReleaseVirtualAction={(action) =>
+							controller?.releaseVirtualAction(action)}
+					/>
 				{/if}
 			</div>
 			<aside
@@ -85,6 +128,23 @@
 				</div>
 			</aside>
 		</div>
+
+		{#if onInput && plugin}
+			<div class="dock-wrapper" class:mobile-only={!showGamepad}>
+				<VirtualGamepad
+					controls={plugin.controls}
+					onAction={(action: InputAction) =>
+						controller
+							? controller.pressVirtualAction(action)
+							: onInput?.(action)}
+					onReleaseAction={(action: InputAction) =>
+						controller?.releaseVirtualAction(action)}
+					{activeActions}
+					mode="fixed-dock"
+					onClose={() => (showGamepad = false)}
+				/>
+			</div>
+		{/if}
 	{/if}
 </section>
 
@@ -94,6 +154,7 @@
 		min-height: 0;
 		width: min(100%, 110rem);
 		margin: auto;
+		position: relative;
 	}
 	.game-layout {
 		height: 100%;
@@ -141,16 +202,37 @@
 		gap: 0.75rem;
 	}
 	.mobile-controls {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+	.controller-toggle {
+		background: rgba(108, 92, 231, 0.25);
+		border: 1px solid rgba(108, 92, 231, 0.5);
+		color: #ffe66d;
+		font-size: 0.78rem;
+		font-weight: 700;
+		padding: 0.4rem 0.75rem;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	.controller-toggle:hover {
+		background: rgba(108, 92, 231, 0.4);
+	}
+	.dock-wrapper.mobile-only {
 		display: none;
 	}
 	@media (max-width: 768px) {
-		.mobile-controls {
-			display: flex;
-			justify-content: flex-end;
-			margin-bottom: 0.5rem;
+		.dock-wrapper.mobile-only {
+			display: block;
 		}
 		.game-layout {
 			grid-template-columns: 1fr;
+			padding-bottom: 7.5rem; /* Reserve space for fixed mobile bottom gamepad dock */
 		}
 		.opponents {
 			display: none;
@@ -158,7 +240,7 @@
 		.opponents.visible {
 			display: block;
 			position: fixed;
-			inset: 4rem 1rem 1rem;
+			inset: 4rem 1rem 8rem;
 			z-index: 50;
 		}
 	}

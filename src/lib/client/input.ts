@@ -34,36 +34,18 @@ export interface PointerEventTarget {
 }
 
 const keyActions: Readonly<Record<string, InputAction>> = {
-	ArrowLeft: 'left',
-	a: 'left',
-	A: 'left',
-	ArrowRight: 'right',
-	d: 'right',
-	D: 'right',
+	ArrowUp: 'up',
 	ArrowDown: 'down',
-	s: 'down',
-	S: 'down',
-	' ': 'button_a',
-	w: 'button_a',
-	W: 'button_a',
-	ArrowUp: 'button_x',
-	x: 'button_x',
-	X: 'button_x',
-	z: 'button_b',
-	Z: 'button_b',
-	q: 'button_b',
-	Q: 'button_b',
+	ArrowLeft: 'left',
+	ArrowRight: 'right',
+	a: 'button_a',
+	A: 'button_a',
+	s: 'button_b',
+	S: 'button_b',
+	z: 'button_x',
+	Z: 'button_x',
 	c: 'button_y',
 	C: 'button_y',
-	Shift: 'button_y',
-	j: 'button_a',
-	J: 'button_a',
-	k: 'button_b',
-	K: 'button_b',
-	u: 'button_x',
-	U: 'button_x',
-	i: 'button_y',
-	I: 'button_y',
 };
 
 const horizontalActions = new Set<InputAction>(['left', 'right']);
@@ -306,3 +288,241 @@ export class PluginInputDispatcher {
 		this.target.removeEventListener('keydown', this.handleKeyDown);
 	}
 }
+
+export interface ControlBindingInfo {
+	readonly action: string;
+	readonly label: string;
+	readonly defaultKeys: readonly string[];
+}
+
+export class UnifiedInputController {
+	private readonly keyMap = new Map<string, InputAction>();
+	private readonly activeActions = new Set<InputAction>();
+	private readonly pressedKeyActions = new Map<string, { action: InputAction; elapsedMs: number; dasTriggered: boolean }>();
+	private readonly virtualActiveActions = new Map<InputAction, { elapsedMs: number; dasTriggered: boolean }>();
+	private horizontalOrder: string[] = [];
+	private virtualHorizontalOrder: InputAction[] = [];
+	private readonly target: EventTarget;
+	private readonly onAction: (action: InputAction) => void;
+	private readonly onStateChange?: ((activeActions: Set<InputAction>) => void) | undefined;
+
+	private readonly handleKeyDown = (event: Event): void => {
+		const e = event as KeyboardEvent;
+		if (
+			typeof HTMLInputElement !== 'undefined' &&
+			(e.target instanceof HTMLInputElement ||
+				e.target instanceof HTMLTextAreaElement)
+		)
+			return;
+
+		const action = this.keyMap.get(e.key) ?? (e.key ? this.keyMap.get(e.key.toLowerCase()) : undefined);
+		if (action === undefined) return;
+		e.preventDefault();
+
+		if (this.pressedKeyActions.has(e.key)) return;
+		this.pressedKeyActions.set(e.key, { action, elapsedMs: 0, dasTriggered: false });
+
+		if (horizontalActions.has(action)) {
+			this.horizontalOrder = this.horizontalOrder.filter((k) => k !== e.key);
+			this.horizontalOrder.push(e.key);
+		}
+
+		this.updateActiveState(action, true);
+		this.onAction(action);
+	};
+
+	private readonly handleKeyUp = (event: Event): void => {
+		const e = event as KeyboardEvent;
+		const entry = this.pressedKeyActions.get(e.key);
+		if (!entry) return;
+
+		const action = entry.action;
+		this.pressedKeyActions.delete(e.key);
+		this.horizontalOrder = this.horizontalOrder.filter((k) => k !== e.key);
+
+		// Check if any other key is still producing this action
+		const isStillPressedOnKey = Array.from(this.pressedKeyActions.values()).some(
+			(item) => item.action === action,
+		);
+		const isVirtualPressed = this.virtualActiveActions.has(action);
+
+		if (!isStillPressedOnKey && !isVirtualPressed) {
+			this.updateActiveState(action, false);
+		}
+	};
+
+	constructor(
+		controls: readonly ControlBindingInfo[],
+		target: EventTarget,
+		onAction: (action: InputAction) => void,
+		onStateChange?: (activeActions: Set<InputAction>) => void,
+		autoStartLoop = true,
+	) {
+		this.target = target;
+		this.onAction = onAction;
+		this.onStateChange = onStateChange;
+
+		for (const binding of controls) {
+			for (const key of binding.defaultKeys) {
+				this.keyMap.set(key, binding.action as InputAction);
+				this.keyMap.set(key.toLowerCase(), binding.action as InputAction);
+			}
+		}
+
+		this.target.addEventListener('keydown', this.handleKeyDown as EventListener);
+		this.target.addEventListener('keyup', this.handleKeyUp as EventListener);
+
+		if (autoStartLoop && typeof requestAnimationFrame !== 'undefined') {
+			this.startLoop();
+		}
+	}
+
+	private animId: number | undefined;
+	private lastFrameTime = 0;
+
+	private readonly tickLoop = (now: number): void => {
+		if (this.lastFrameTime > 0) {
+			const elapsed = Math.min(now - this.lastFrameTime, 100);
+			this.update(elapsed);
+		}
+		this.lastFrameTime = now;
+		this.animId = requestAnimationFrame(this.tickLoop);
+	};
+
+	public startLoop(): void {
+		if (this.animId !== undefined) return;
+		this.lastFrameTime = performance.now();
+		this.animId = requestAnimationFrame(this.tickLoop);
+	}
+
+	public stopLoop(): void {
+		if (this.animId !== undefined) {
+			cancelAnimationFrame(this.animId);
+			this.animId = undefined;
+		}
+		this.lastFrameTime = 0;
+	}
+
+	public pressVirtualAction(action: InputAction): void {
+		if (!this.virtualActiveActions.has(action)) {
+			this.virtualActiveActions.set(action, { elapsedMs: 0, dasTriggered: false });
+			if (horizontalActions.has(action)) {
+				this.virtualHorizontalOrder = this.virtualHorizontalOrder.filter((a) => a !== action);
+				this.virtualHorizontalOrder.push(action);
+			}
+			this.updateActiveState(action, true);
+			this.onAction(action);
+		}
+	}
+
+	public releaseVirtualAction(action: InputAction): void {
+		if (this.virtualActiveActions.has(action)) {
+			this.virtualActiveActions.delete(action);
+			if (horizontalActions.has(action)) {
+				this.virtualHorizontalOrder = this.virtualHorizontalOrder.filter((a) => a !== action);
+			}
+
+			const isKeyActive = Array.from(this.pressedKeyActions.values()).some(
+				(item) => item.action === action,
+			);
+			if (!isKeyActive) {
+				this.updateActiveState(action, false);
+			}
+		}
+	}
+
+	public isActionActive(action: InputAction): boolean {
+		return this.activeActions.has(action);
+	}
+
+	public getActiveActions(): Set<InputAction> {
+		return new Set(this.activeActions);
+	}
+
+	private updateActiveState(action: InputAction, active: boolean): void {
+		const changed = active
+			? !this.activeActions.has(action) && (this.activeActions.add(action), true)
+			: this.activeActions.has(action) && (this.activeActions.delete(action), true);
+
+		if (changed && this.onStateChange) {
+			this.onStateChange(new Set(this.activeActions));
+		}
+	}
+
+	public update(elapsedMs: number): void {
+		if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return;
+
+		// 1. Keyboard horizontal DAS/ARR
+		const horizontalKey = this.horizontalOrder.at(-1);
+		if (horizontalKey !== undefined) {
+			const horizontal = this.pressedKeyActions.get(horizontalKey);
+			if (horizontal !== undefined) {
+				horizontal.elapsedMs += elapsedMs;
+				const threshold = horizontal.dasTriggered ? ARR_MS : DAS_MS;
+				if (horizontal.elapsedMs >= threshold) {
+					this.onAction(horizontal.action);
+					horizontal.elapsedMs -= threshold;
+					horizontal.dasTriggered = true;
+					while (horizontal.elapsedMs >= ARR_MS) {
+						horizontal.elapsedMs -= ARR_MS;
+						this.onAction(horizontal.action);
+					}
+				}
+			}
+		}
+
+		// 2. Virtual horizontal DAS/ARR
+		const virtualHorizontalAction = this.virtualHorizontalOrder.at(-1);
+		if (virtualHorizontalAction !== undefined) {
+			const virtualHorizontal = this.virtualActiveActions.get(virtualHorizontalAction);
+			if (virtualHorizontal !== undefined) {
+				virtualHorizontal.elapsedMs += elapsedMs;
+				const threshold = virtualHorizontal.dasTriggered ? ARR_MS : DAS_MS;
+				if (virtualHorizontal.elapsedMs >= threshold) {
+					this.onAction(virtualHorizontalAction);
+					virtualHorizontal.elapsedMs -= threshold;
+					virtualHorizontal.dasTriggered = true;
+					while (virtualHorizontal.elapsedMs >= ARR_MS) {
+						virtualHorizontal.elapsedMs -= ARR_MS;
+						this.onAction(virtualHorizontalAction);
+					}
+				}
+			}
+		}
+
+		// 3. Keyboard soft drop
+		for (const pressed of this.pressedKeyActions.values()) {
+			if (pressed.action !== 'down') continue;
+			pressed.elapsedMs += elapsedMs;
+			while (pressed.elapsedMs >= SOFT_DROP_MS) {
+				pressed.elapsedMs -= SOFT_DROP_MS;
+				this.onAction(pressed.action);
+			}
+		}
+
+		// 4. Virtual soft drop
+		const virtualDown = this.virtualActiveActions.get('down');
+		if (virtualDown !== undefined) {
+			virtualDown.elapsedMs += elapsedMs;
+			while (virtualDown.elapsedMs >= SOFT_DROP_MS) {
+				virtualDown.elapsedMs -= SOFT_DROP_MS;
+				this.onAction('down');
+			}
+		}
+	}
+
+	public dispose(): void {
+		this.stopLoop();
+		this.target.removeEventListener('keydown', this.handleKeyDown as EventListener);
+		this.target.removeEventListener('keyup', this.handleKeyUp as EventListener);
+		this.pressedKeyActions.clear();
+		this.virtualActiveActions.clear();
+		this.horizontalOrder = [];
+		this.virtualHorizontalOrder = [];
+		this.activeActions.clear();
+		if (this.onStateChange) {
+			this.onStateChange(new Set());
+		}
+	}
+}
+

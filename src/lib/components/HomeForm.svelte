@@ -47,11 +47,10 @@
 
 	<div class="controls" aria-label="Keyboard controls">
 		<strong>Controls</strong>
-		<span>Arrows / A D move</span>
-		<span>Down / S soft drop</span>
-		<span>Space / W hard drop</span>
-		<span>Up / X rotate, Z / Q counter-rotate</span>
-		<span>C / Shift hold</span>
+		<span>Arrow Keys move / drop</span>
+		<span>A hard drop</span>
+		<span>Up / Z rotate CW, S rotate CCW</span>
+		<span>C hold piece</span>
 	</div>
 </section>
 

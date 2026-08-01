@@ -4,6 +4,7 @@ import {
 	KeyboardInput,
 	mapKeyToAction,
 	SwipeInput,
+	UnifiedInputController,
 	type PointerEventTarget,
 } from '../input';
 
@@ -113,20 +114,18 @@ class FakePointerTarget implements PointerEventTarget {
 describe('local keyboard input', () => {
 	test('maps primary and alternate controls', () => {
 		const expected: Array<[string, InputAction]> = [
-			['ArrowLeft', 'left'],
-			['a', 'left'],
-			['ArrowRight', 'right'],
-			['d', 'right'],
+			['ArrowUp', 'up'],
 			['ArrowDown', 'down'],
-			['s', 'down'],
-			[' ', 'button_a'],
-			['w', 'button_a'],
-			['ArrowUp', 'button_x'],
-			['x', 'button_x'],
-			['z', 'button_b'],
-			['q', 'button_b'],
+			['ArrowLeft', 'left'],
+			['ArrowRight', 'right'],
+			['a', 'button_a'],
+			['A', 'button_a'],
+			['s', 'button_b'],
+			['S', 'button_b'],
+			['z', 'button_x'],
+			['Z', 'button_x'],
 			['c', 'button_y'],
-			['Shift', 'button_y'],
+			['C', 'button_y'],
 		];
 		for (const [key, action] of expected)
 			expect(mapKeyToAction(key)).toBe(action);
@@ -136,11 +135,11 @@ describe('local keyboard input', () => {
 		const target = new FakeTarget();
 		const actions: InputAction[] = [];
 		const input = new KeyboardInput(target, (action) => actions.push(action));
-		expect(target.dispatch('keydown', ' ')).toBe(true);
-		expect(target.dispatch('keydown', ' ')).toBe(true);
+		expect(target.dispatch('keydown', 'a')).toBe(true);
+		expect(target.dispatch('keydown', 'a')).toBe(true);
 		expect(actions).toEqual(['button_a']);
 		input.dispose();
-		expect(target.dispatch('keydown', 'x')).toBe(false);
+		expect(target.dispatch('keydown', 'a')).toBe(false);
 	});
 
 	test('generates DAS, ARR, and soft-drop repeats', () => {
@@ -328,3 +327,92 @@ describe('local swipe input', () => {
 		expect(actions).toEqual(['left']);
 	});
 });
+
+describe('UnifiedInputController', () => {
+	test('dispatches key actions and tracks active state correctly', () => {
+		const target = new FakeTarget();
+		const actions: InputAction[] = [];
+		let activeState = new Set<InputAction>();
+
+		const controller = new UnifiedInputController(
+			[
+				{ action: 'left', label: 'Move Left', defaultKeys: ['ArrowLeft'] },
+				{ action: 'button_a', label: 'Hard Drop', defaultKeys: ['a', 'A'] },
+			],
+			target as unknown as EventTarget,
+			(action) => actions.push(action),
+			(state) => {
+				activeState = state;
+			},
+			false, // autoStartLoop = false for manual time step control
+		);
+
+		expect(target.dispatch('keydown', 'ArrowLeft')).toBe(true);
+		expect(actions).toEqual(['left']);
+		expect(controller.isActionActive('left')).toBe(true);
+		expect(activeState.has('left')).toBe(true);
+
+		target.dispatch('keyup', 'ArrowLeft');
+		expect(controller.isActionActive('left')).toBe(false);
+
+		controller.dispose();
+	});
+
+	test('handles virtual action press and release', () => {
+		const target = new FakeTarget();
+		const actions: InputAction[] = [];
+		let activeState = new Set<InputAction>();
+
+		const controller = new UnifiedInputController(
+			[
+				{ action: 'button_b', label: 'Rotate CCW', defaultKeys: ['s'] },
+				{ action: 'right', label: 'Move Right', defaultKeys: ['ArrowRight'] },
+			],
+			target as unknown as EventTarget,
+			(action) => actions.push(action),
+			(state) => {
+				activeState = state;
+			},
+			false,
+		);
+
+		controller.pressVirtualAction('button_b');
+		expect(actions).toEqual(['button_b']);
+		expect(controller.isActionActive('button_b')).toBe(true);
+		expect(activeState.has('button_b')).toBe(true);
+
+		controller.releaseVirtualAction('button_b');
+		expect(controller.isActionActive('button_b')).toBe(false);
+
+		controller.dispose();
+	});
+
+	test('generates DAS and ARR repeats for virtual horizontal actions', () => {
+		const target = new FakeTarget();
+		const actions: InputAction[] = [];
+
+		const controller = new UnifiedInputController(
+			[{ action: 'right', label: 'Move Right', defaultKeys: ['ArrowRight'] }],
+			target as unknown as EventTarget,
+			(action) => actions.push(action),
+			undefined,
+			false,
+		);
+
+		controller.pressVirtualAction('right');
+		expect(actions).toEqual(['right']);
+
+		controller.update(140);
+		expect(actions).toEqual(['right', 'right']);
+
+		controller.update(40);
+		expect(actions).toEqual(['right', 'right', 'right']);
+
+		controller.releaseVirtualAction('right');
+		controller.update(100);
+		expect(actions).toEqual(['right', 'right', 'right']);
+
+		controller.dispose();
+	});
+});
+
