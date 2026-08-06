@@ -3,8 +3,7 @@ import { mkdir, copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const outputDir = join(process.cwd(), 'local', 'screenshots');
-const artifactDir =
-	'/Users/quangtran/.gemini/antigravity-ide/brain/a6d9888a-225d-464d-8603-e412199d514b';
+const artifactDir = process.env.ARTIFACT_DIR;
 
 test.beforeAll(async () => {
 	await mkdir(outputDir, { recursive: true });
@@ -62,10 +61,12 @@ for (const game of games) {
 		const filePath = join(outputDir, fileName);
 		await page.screenshot({ path: filePath, fullPage: true });
 
-		try {
-			await copyFile(filePath, join(artifactDir, fileName));
-		} catch {
-			// ignore
+		if (artifactDir) {
+			try {
+				await copyFile(filePath, join(artifactDir, fileName));
+			} catch {
+				// ignore
+			}
 		}
 
 		await context.close();
@@ -118,10 +119,12 @@ for (const game of games) {
 		const filePath = join(outputDir, fileName);
 		await page.screenshot({ path: filePath, fullPage: true });
 
-		try {
-			await copyFile(filePath, join(artifactDir, fileName));
-		} catch {
-			// ignore
+		if (artifactDir) {
+			try {
+				await copyFile(filePath, join(artifactDir, fileName));
+			} catch {
+				// ignore
+			}
 		}
 
 		await context.close();
