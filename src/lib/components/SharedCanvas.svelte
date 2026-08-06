@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { RoomSnapshot } from '../../shared/types';
+	import type { InputAction, RoomSnapshot } from '../../shared/types';
 	import { gameRegistry } from '../../games';
-	import { PluginInputDispatcher } from '../client/input';
+	import { UnifiedInputController } from '../client/input';
+	import VirtualGamepad from './VirtualGamepad.svelte';
+	import ControlLegend from './ControlLegend.svelte';
 
 	let {
 		snapshot,
@@ -10,11 +12,14 @@
 		onInput,
 	}: {
 		snapshot: RoomSnapshot;
-		local?: boolean;
-		onInput: ((action: any) => void) | undefined;
+		local?: boolean | undefined;
+		onInput?: ((action: any) => void) | undefined;
 	} = $props();
 
 	let canvas: HTMLCanvasElement;
+	let showGamepad = $state(false);
+	let activeActions = $state(new Set<InputAction>());
+	let controller: UnifiedInputController | undefined;
 
 	const gameType = $derived(snapshot.gameType ?? 'snake');
 	const plugin = $derived(
@@ -79,51 +84,70 @@
 
 	$effect(() => {
 		if (!local || onInput === undefined || !plugin) return;
-		const dispatcher = new PluginInputDispatcher(
+		controller?.dispose();
+		controller = new UnifiedInputController(
 			plugin.controls,
 			window,
 			onInput,
+			(newSet) => {
+				activeActions = newSet;
+			},
 		);
 		if (canvas) canvas.focus();
 
 		return () => {
-			dispatcher.dispose();
+			controller?.dispose();
+			controller = undefined;
 		};
 	});
-
-	const handleClick = (e: MouseEvent): void => {
-		if (!onInput || !canvas || currentSnapshot.phase !== 'playing') return;
-		const rect = canvas.getBoundingClientRect();
-		const clickY = e.clientY - rect.top;
-		const hudY = rect.height - 65;
-
-		if (clickY >= hudY) {
-			const itemW = rect.width / 5;
-			const clickX = e.clientX - rect.left;
-			const idx = Math.floor(clickX / itemW);
-
-			if (idx === 0) onInput('button_a');
-			else if (idx === 1) onInput('button_b');
-			else if (idx === 2) onInput('button_x');
-			else if (idx === 3) onInput('button_y');
-			else if (idx === 4) onInput('up');
-		}
-	};
 </script>
 
 <div class="shared-arena-container">
 	<div class="arena-header">
 		<h2>{plugin?.name ?? 'Shared Arena'}</h2>
-		<span class="view-mode-badge">{plugin?.viewMode ?? 'shared-canvas'}</span>
+		<div class="header-actions">
+			{#if local && onInput}
+				<button
+					type="button"
+					class="controller-toggle-btn"
+					onclick={() => (showGamepad = !showGamepad)}
+					aria-label={showGamepad ? 'Hide Controller' : 'Show Controller'}
+				>
+					🎮 Controls
+				</button>
+			{/if}
+			<span class="view-mode-badge">{plugin?.viewMode ?? 'shared-canvas'}</span>
+		</div>
 	</div>
 	<canvas
 		bind:this={canvas}
+		class:mobile-poker={gameType === 'poker'}
+		style={`aspect-ratio: ${plugin?.aspectRatio ?? 4 / 3};`}
 		tabindex={local ? 0 : -1}
-		onclick={handleClick}
 		aria-label={`${plugin?.name ?? 'Game'} Shared Arena`}
 	></canvas>
+
+	{#if local && onInput && plugin}
+		<div class="dock-wrapper" class:mobile-only={!showGamepad}>
+			<VirtualGamepad
+				controls={plugin.controls}
+				onAction={(action: InputAction) =>
+					controller
+						? controller.pressVirtualAction(action)
+						: onInput?.(action)}
+				onReleaseAction={(action: InputAction) =>
+					controller?.releaseVirtualAction(action)}
+				{activeActions}
+				mode="fixed-dock"
+				onClose={() => (showGamepad = false)}
+			/>
+		</div>
+	{/if}
+
 	<div class="arena-footer">
-		<span>Controls: Use Arrow Keys or W / A / S / D to move</span>
+		{#if plugin?.controls}
+			<ControlLegend controls={plugin.controls} compact={true} />
+		{/if}
 	</div>
 </div>
 
@@ -140,18 +164,37 @@
 		border-radius: 1rem;
 		padding: 1rem;
 		box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.4);
+		gap: 0.75rem;
+		position: relative;
 	}
 	.arena-header {
 		width: 100%;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 0.5rem;
 	}
 	.arena-header h2 {
 		margin: 0;
 		font-size: 1.25rem;
 		color: #f8fafc;
+	}
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.controller-toggle-btn {
+		background: rgba(108, 92, 231, 0.25);
+		border: 1px solid rgba(108, 92, 231, 0.5);
+		color: #ffe66d;
+		font-size: 0.75rem;
+		font-weight: 700;
+		padding: 0.25rem 0.6rem;
+		border-radius: 0.5rem;
+		cursor: pointer;
+	}
+	.controller-toggle-btn:hover {
+		background: rgba(108, 92, 231, 0.4);
 	}
 	.view-mode-badge {
 		background: #3b82f6;
@@ -165,7 +208,6 @@
 	canvas {
 		width: 100%;
 		max-width: 900px;
-		aspect-ratio: 4 / 3;
 		background: #0f172a;
 		border-radius: 0.5rem;
 		border: 1px solid rgba(255, 255, 255, 0.1);
@@ -175,9 +217,27 @@
 		border-color: #3b82f6;
 		box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 	}
+	.dock-wrapper.mobile-only {
+		display: none;
+	}
 	.arena-footer {
-		margin-top: 0.5rem;
+		width: 100%;
 		font-size: 0.85rem;
 		color: #94a3b8;
+	}
+	@media (max-width: 768px) {
+		.dock-wrapper.mobile-only {
+			display: block;
+		}
+		.shared-arena-container {
+			padding-bottom: 7.5rem;
+		}
+		.arena-footer {
+			display: none;
+		}
+		canvas.mobile-poker {
+			aspect-ratio: 3 / 4 !important;
+			max-height: 55dvh;
+		}
 	}
 </style>

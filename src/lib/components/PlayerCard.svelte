@@ -1,18 +1,26 @@
 <script lang="ts">
 	import type { InputAction, PlayerSnapshot } from '../../shared/types';
+	import type { GameControlBinding } from '../../games/types';
+	import { fallingBlocksPlugin } from '../../games/falling-blocks';
 	import BoardCanvas from './BoardCanvas.svelte';
 	import PiecePreview from './PiecePreview.svelte';
+	import ControlLegend from './ControlLegend.svelte';
 
 	let {
 		player,
 		local = false,
 		compact = false,
 		onInput,
+		controls = fallingBlocksPlugin.controls,
 	}: {
 		player: PlayerSnapshot;
-		local?: boolean;
-		compact?: boolean;
-		onInput: ((action: InputAction) => void) | undefined;
+		local?: boolean | undefined;
+		compact?: boolean | undefined;
+		onInput?: ((action: InputAction) => void) | undefined;
+		controls?: readonly GameControlBinding[] | undefined;
+		activeActions?: Set<InputAction> | undefined;
+		onVirtualAction?: ((action: InputAction) => void) | undefined;
+		onReleaseVirtualAction?: ((action: InputAction) => void) | undefined;
 	} = $props();
 </script>
 
@@ -73,15 +81,9 @@
 			</aside>
 		</div>
 		<details class="controls">
-			<summary>Controls <span>?</span></summary>
-			<div aria-label="Keyboard and touch controls">
-				<span>Left / A, Right / D move</span><span>Down / S soft drop</span>
-				<span>Space / W hard drop</span><span
-					>Up / X rotate, Z / Q counter-rotate</span
-				>
-				<span>C / Shift hold</span>
-				<span>Swipe left / right move, swipe up rotate</span>
-				<span>Swipe down soft drop, swipe down twice hard drop</span>
+			<summary>Controls Guide <span>?</span></summary>
+			<div class="legend-box">
+				<ControlLegend {controls} compact={true} />
 			</div>
 		</details>
 	{:else}
@@ -116,6 +118,7 @@
 	}
 	.card.local {
 		min-height: 0;
+		height: 100%;
 		display: grid;
 		grid-template-rows: auto minmax(0, 1fr) auto;
 		border: 1px solid #ffe66d;
@@ -129,7 +132,7 @@
 		justify-content: space-between;
 		gap: 0.5rem;
 		align-items: center;
-		margin-bottom: 0.65rem;
+		margin-bottom: 0.5rem;
 	}
 	.identity > div {
 		min-width: 0;
@@ -232,7 +235,7 @@
 		font-size: 0.86rem;
 	}
 	.controls {
-		margin-top: 0.65rem;
+		margin-top: 0.4rem;
 		color: #aaa5c0;
 		font-size: 0.72rem;
 	}
@@ -254,11 +257,8 @@
 		border: 1px solid #68627e;
 		border-radius: 50%;
 	}
-	.controls div {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.25rem 0.5rem;
-		margin-top: 0.45rem;
+	.legend-box {
+		margin-top: 0.35rem;
 	}
 	.opponent-content {
 		display: grid;
@@ -282,18 +282,15 @@
 			grid-template-columns: 4.5rem minmax(0, 1fr) 5.5rem;
 			gap: 0.4rem;
 		}
-		.controls div {
-			grid-template-columns: 1fr;
-		}
 	}
 	@media (max-width: 520px) {
 		.local-gameplay {
 			grid-template-columns: 4.25rem minmax(0, 1fr);
-			grid-template-rows: clamp(15rem, 48dvh, 18rem) auto;
-			row-gap: 0.6rem;
+			grid-template-rows: clamp(14rem, 45dvh, 18rem) auto;
+			row-gap: 0.5rem;
 		}
 		.board-wrap {
-			height: clamp(15rem, 48dvh, 18rem);
+			height: clamp(14rem, 45dvh, 18rem);
 			min-height: 0;
 		}
 		.side-panel {
