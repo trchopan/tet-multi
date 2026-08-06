@@ -402,26 +402,7 @@ export class SnakeGameEngine implements GameEngine<
 		this.ensureFood();
 
 		// 5. Match finish check
-		const remaining = Array.from(this.players.values()).filter(
-			(p) => p.matchState === 'playing',
-		);
-		const totalPlayers = this.players.size;
-
-		if (totalPlayers === 1) {
-			if (remaining.length === 0) {
-				this.isGameOver = true;
-				this.winners = [];
-			}
-		} else if (remaining.length <= 1) {
-			this.isGameOver = true;
-			const winner = remaining[0];
-			if (remaining.length === 1 && winner) {
-				winner.placement = 1;
-				this.winners = [winner.playerId];
-			} else {
-				this.winners = [];
-			}
-		}
+		this.checkMatchEnd();
 	}
 
 	public eliminatePlayers(playerIds: readonly string[]): void {
@@ -436,18 +417,54 @@ export class SnakeGameEngine implements GameEngine<
 			}
 		}
 		this.ensureFood();
+		this.checkMatchEnd();
+	}
+
+	private checkMatchEnd(): void {
+		if (this.isGameOver) return;
+
 		const remaining = Array.from(this.players.values()).filter(
 			(p) => p.matchState === 'playing',
 		);
+		const totalPlayers = this.players.size;
+
+		if (totalPlayers === 1) {
+			if (remaining.length === 0) {
+				this.isGameOver = true;
+				this.winners = [];
+			}
+			return;
+		}
+
 		if (remaining.length <= 1) {
 			this.isGameOver = true;
-			if (remaining.length === 1) {
-				const winner = remaining[0]!;
+			const winner = remaining[0];
+			if (remaining.length === 1 && winner) {
 				winner.placement = 1;
 				this.winners = [winner.playerId];
 			} else {
 				this.winners = [];
 			}
+			return;
+		}
+
+		// Check if all human players have been eliminated when match started with human player(s)
+		const hasHumanPlayers = Array.from(this.players.keys()).some(
+			(id) => !this.botControllers.has(id),
+		);
+		const hasActiveHuman = Array.from(this.players.values()).some(
+			(p) => p.matchState === 'playing' && !this.botControllers.has(p.playerId),
+		);
+
+		if (hasHumanPlayers && !hasActiveHuman) {
+			this.isGameOver = true;
+			const activeComputers = remaining.filter((p) =>
+				this.botControllers.has(p.playerId),
+			);
+			for (const comp of activeComputers) {
+				comp.placement = 1;
+			}
+			this.winners = activeComputers.map((c) => c.playerId);
 		}
 	}
 
