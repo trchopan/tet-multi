@@ -298,13 +298,20 @@ export interface ControlBindingInfo {
 export class UnifiedInputController {
 	private readonly keyMap = new Map<string, InputAction>();
 	private readonly activeActions = new Set<InputAction>();
-	private readonly pressedKeyActions = new Map<string, { action: InputAction; elapsedMs: number; dasTriggered: boolean }>();
-	private readonly virtualActiveActions = new Map<InputAction, { elapsedMs: number; dasTriggered: boolean }>();
+	private readonly pressedKeyActions = new Map<
+		string,
+		{ action: InputAction; elapsedMs: number; dasTriggered: boolean }
+	>();
+	private readonly virtualActiveActions = new Map<
+		InputAction,
+		{ elapsedMs: number; dasTriggered: boolean }
+	>();
 	private horizontalOrder: string[] = [];
 	private virtualHorizontalOrder: InputAction[] = [];
 	private readonly target: EventTarget;
 	private readonly onAction: (action: InputAction) => void;
-	private readonly onStateChange?: ((activeActions: Set<InputAction>) => void) | undefined;
+	private readonly onStateChange?:
+		((activeActions: Set<InputAction>) => void) | undefined;
 
 	private readonly handleKeyDown = (event: Event): void => {
 		const e = event as KeyboardEvent;
@@ -315,12 +322,18 @@ export class UnifiedInputController {
 		)
 			return;
 
-		const action = this.keyMap.get(e.key) ?? (e.key ? this.keyMap.get(e.key.toLowerCase()) : undefined);
+		const action =
+			this.keyMap.get(e.key) ??
+			(e.key ? this.keyMap.get(e.key.toLowerCase()) : undefined);
 		if (action === undefined) return;
 		e.preventDefault();
 
 		if (this.pressedKeyActions.has(e.key)) return;
-		this.pressedKeyActions.set(e.key, { action, elapsedMs: 0, dasTriggered: false });
+		this.pressedKeyActions.set(e.key, {
+			action,
+			elapsedMs: 0,
+			dasTriggered: false,
+		});
 
 		if (horizontalActions.has(action)) {
 			this.horizontalOrder = this.horizontalOrder.filter((k) => k !== e.key);
@@ -341,9 +354,9 @@ export class UnifiedInputController {
 		this.horizontalOrder = this.horizontalOrder.filter((k) => k !== e.key);
 
 		// Check if any other key is still producing this action
-		const isStillPressedOnKey = Array.from(this.pressedKeyActions.values()).some(
-			(item) => item.action === action,
-		);
+		const isStillPressedOnKey = Array.from(
+			this.pressedKeyActions.values(),
+		).some((item) => item.action === action);
 		const isVirtualPressed = this.virtualActiveActions.has(action);
 
 		if (!isStillPressedOnKey && !isVirtualPressed) {
@@ -369,7 +382,10 @@ export class UnifiedInputController {
 			}
 		}
 
-		this.target.addEventListener('keydown', this.handleKeyDown as EventListener);
+		this.target.addEventListener(
+			'keydown',
+			this.handleKeyDown as EventListener,
+		);
 		this.target.addEventListener('keyup', this.handleKeyUp as EventListener);
 
 		if (autoStartLoop && typeof requestAnimationFrame !== 'undefined') {
@@ -405,9 +421,14 @@ export class UnifiedInputController {
 
 	public pressVirtualAction(action: InputAction): void {
 		if (!this.virtualActiveActions.has(action)) {
-			this.virtualActiveActions.set(action, { elapsedMs: 0, dasTriggered: false });
+			this.virtualActiveActions.set(action, {
+				elapsedMs: 0,
+				dasTriggered: false,
+			});
 			if (horizontalActions.has(action)) {
-				this.virtualHorizontalOrder = this.virtualHorizontalOrder.filter((a) => a !== action);
+				this.virtualHorizontalOrder = this.virtualHorizontalOrder.filter(
+					(a) => a !== action,
+				);
 				this.virtualHorizontalOrder.push(action);
 			}
 			this.updateActiveState(action, true);
@@ -419,7 +440,9 @@ export class UnifiedInputController {
 		if (this.virtualActiveActions.has(action)) {
 			this.virtualActiveActions.delete(action);
 			if (horizontalActions.has(action)) {
-				this.virtualHorizontalOrder = this.virtualHorizontalOrder.filter((a) => a !== action);
+				this.virtualHorizontalOrder = this.virtualHorizontalOrder.filter(
+					(a) => a !== action,
+				);
 			}
 
 			const isKeyActive = Array.from(this.pressedKeyActions.values()).some(
@@ -441,8 +464,10 @@ export class UnifiedInputController {
 
 	private updateActiveState(action: InputAction, active: boolean): void {
 		const changed = active
-			? !this.activeActions.has(action) && (this.activeActions.add(action), true)
-			: this.activeActions.has(action) && (this.activeActions.delete(action), true);
+			? !this.activeActions.has(action) &&
+				(this.activeActions.add(action), true)
+			: this.activeActions.has(action) &&
+				(this.activeActions.delete(action), true);
 
 		if (changed && this.onStateChange) {
 			this.onStateChange(new Set(this.activeActions));
@@ -474,7 +499,9 @@ export class UnifiedInputController {
 		// 2. Virtual horizontal DAS/ARR
 		const virtualHorizontalAction = this.virtualHorizontalOrder.at(-1);
 		if (virtualHorizontalAction !== undefined) {
-			const virtualHorizontal = this.virtualActiveActions.get(virtualHorizontalAction);
+			const virtualHorizontal = this.virtualActiveActions.get(
+				virtualHorizontalAction,
+			);
 			if (virtualHorizontal !== undefined) {
 				virtualHorizontal.elapsedMs += elapsedMs;
 				const threshold = virtualHorizontal.dasTriggered ? ARR_MS : DAS_MS;
@@ -513,7 +540,10 @@ export class UnifiedInputController {
 
 	public dispose(): void {
 		this.stopLoop();
-		this.target.removeEventListener('keydown', this.handleKeyDown as EventListener);
+		this.target.removeEventListener(
+			'keydown',
+			this.handleKeyDown as EventListener,
+		);
 		this.target.removeEventListener('keyup', this.handleKeyUp as EventListener);
 		this.pressedKeyActions.clear();
 		this.virtualActiveActions.clear();
@@ -525,4 +555,3 @@ export class UnifiedInputController {
 		}
 	}
 }
-

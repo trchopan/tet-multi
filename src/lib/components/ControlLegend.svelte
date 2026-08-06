@@ -20,6 +20,7 @@
 			case 'ArrowRight':
 				return '→';
 			case 'Space':
+			case ' ':
 				return 'Space';
 			default:
 				return key.toUpperCase();

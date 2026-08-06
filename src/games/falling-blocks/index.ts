@@ -16,14 +16,22 @@ export const fallingBlocksPlugin: GamePlugin = {
 	viewMode: 'per-player-card',
 	aspectRatio: 1 / 2,
 	controls: [
-		{ action: 'left', label: 'Move Left', defaultKeys: ['ArrowLeft'] },
-		{ action: 'right', label: 'Move Right', defaultKeys: ['ArrowRight'] },
-		{ action: 'down', label: 'Soft Drop', defaultKeys: ['ArrowDown'] },
-		{ action: 'up', label: 'Rotate CW', defaultKeys: ['ArrowUp'] },
-		{ action: 'button_a', label: 'Hard Drop (A)', defaultKeys: ['a', 'A'] },
-		{ action: 'button_b', label: 'Rotate CCW (B)', defaultKeys: ['s', 'S'] },
-		{ action: 'button_x', label: 'Rotate CW (X)', defaultKeys: ['z', 'Z'] },
-		{ action: 'button_y', label: 'Hold Piece (Y)', defaultKeys: ['c', 'C'] },
+		{ action: 'left', label: 'Move Left', defaultKeys: ['ArrowLeft', 'a'] },
+		{ action: 'right', label: 'Move Right', defaultKeys: ['ArrowRight', 'd'] },
+		{ action: 'down', label: 'Soft Drop', defaultKeys: ['ArrowDown', 's'] },
+		{ action: 'up', label: 'Rotate CW', defaultKeys: ['ArrowUp', 'w'] },
+		{ action: 'button_a', label: 'Hard Drop (A)', defaultKeys: [' ', 'Space'] },
+		{
+			action: 'button_b',
+			label: 'Rotate CCW (B)',
+			defaultKeys: ['z', 'Control'],
+		},
+		{ action: 'button_x', label: 'Rotate CW (X)', defaultKeys: ['x'] },
+		{
+			action: 'button_y',
+			label: 'Hold Piece (Y)',
+			defaultKeys: ['c', 'Shift'],
+		},
 	],
 	createEngine(options) {
 		return new FallingBlocksGameEngine(

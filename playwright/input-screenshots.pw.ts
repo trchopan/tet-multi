@@ -3,7 +3,8 @@ import { mkdir, copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const outputDir = join(process.cwd(), 'local', 'screenshots');
-const artifactDir = '/Users/quangtran/.gemini/antigravity-ide/brain/a6d9888a-225d-464d-8603-e412199d514b';
+const artifactDir =
+	'/Users/quangtran/.gemini/antigravity-ide/brain/a6d9888a-225d-464d-8603-e412199d514b';
 
 test.beforeAll(async () => {
 	await mkdir(outputDir, { recursive: true });
@@ -32,7 +33,9 @@ for (const game of games) {
 		}
 
 		await page.getByRole('button', { name: 'Create room' }).click();
-		await expect(page.getByText('Waiting room')).toBeVisible();
+		await expect(page.getByText(/Waiting room/i)).toBeVisible({
+			timeout: 10_000,
+		});
 
 		const addBotBtn = page.getByRole('button', { name: /Add.*computer/i });
 		if (await addBotBtn.isVisible()) {
@@ -44,10 +47,15 @@ for (const game of games) {
 		await expect(startBtn).toBeEnabled();
 		await startBtn.click();
 
-		await expect(page.locator('[data-match-id]')).toBeVisible({ timeout: 10_000 });
-		
+		await expect(page.locator('[data-match-id]')).toBeVisible({
+			timeout: 10_000,
+		});
+
 		// Wait for countdown to finish so gameplay and gamepad controls are fully visible
-		await page.locator('.countdown').waitFor({ state: 'detached', timeout: 10_000 }).catch(() => {});
+		await page
+			.locator('.countdown')
+			.waitFor({ state: 'detached', timeout: 10_000 })
+			.catch(() => {});
 		await page.waitForTimeout(500);
 
 		const fileName = `input-${game.id}-desktop.png`;
@@ -81,7 +89,9 @@ for (const game of games) {
 		}
 
 		await page.getByRole('button', { name: 'Create room' }).click();
-		await expect(page.getByText('Waiting room')).toBeVisible();
+		await expect(page.getByText(/Waiting room/i)).toBeVisible({
+			timeout: 10_000,
+		});
 
 		const addBotBtn = page.getByRole('button', { name: /Add.*computer/i });
 		if (await addBotBtn.isVisible()) {
@@ -93,10 +103,15 @@ for (const game of games) {
 		await expect(startBtn).toBeEnabled();
 		await startBtn.click();
 
-		await expect(page.locator('[data-match-id]')).toBeVisible({ timeout: 10_000 });
-		
+		await expect(page.locator('[data-match-id]')).toBeVisible({
+			timeout: 10_000,
+		});
+
 		// Wait for countdown to finish so gameplay and gamepad controls are fully visible
-		await page.locator('.countdown').waitFor({ state: 'detached', timeout: 10_000 }).catch(() => {});
+		await page
+			.locator('.countdown')
+			.waitFor({ state: 'detached', timeout: 10_000 })
+			.catch(() => {});
 		await page.waitForTimeout(500);
 
 		const fileName = `input-${game.id}-mobile.png`;

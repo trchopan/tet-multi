@@ -163,7 +163,13 @@ function renderDesktopPokerView(
 	// Gold Chip Icon
 	ctx.fillStyle = '#fbbf24';
 	ctx.beginPath();
-	ctx.arc(centerX - potW / 2 + 16, centerY - cardH - 24 + potH / 2, 8, 0, Math.PI * 2);
+	ctx.arc(
+		centerX - potW / 2 + 16,
+		centerY - cardH - 24 + potH / 2,
+		8,
+		0,
+		Math.PI * 2,
+	);
 	ctx.fill();
 	ctx.fillStyle = '#78350f';
 	ctx.font = 'bold 9px system-ui, sans-serif';
@@ -176,7 +182,11 @@ function renderDesktopPokerView(
 	ctx.font = `bold ${Math.max(10, Math.min(14, Math.floor(potH * 0.45)))}px system-ui, sans-serif`;
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'middle';
-	ctx.fillText(`POT: $${gameState.pot}`, centerX + 8, centerY - cardH - 24 + potH / 2);
+	ctx.fillText(
+		`POT: $${gameState.pot}`,
+		centerX + 8,
+		centerY - cardH - 24 + potH / 2,
+	);
 	ctx.restore();
 
 	// Community Cards Slots (5 slots)
@@ -414,11 +424,23 @@ function renderMobilePokerView(
 	if (opponents.length === 1) {
 		oppCoords = [[centerX, row1Y]];
 	} else if (opponents.length === 2) {
-		oppCoords = [[col1X, row1Y], [col2X, row1Y]];
+		oppCoords = [
+			[col1X, row1Y],
+			[col2X, row1Y],
+		];
 	} else if (opponents.length === 3) {
-		oppCoords = [[col1X, row1Y], [col2X, row1Y], [centerX, row2Y]];
+		oppCoords = [
+			[col1X, row1Y],
+			[col2X, row1Y],
+			[centerX, row2Y],
+		];
 	} else {
-		oppCoords = [[col1X, row1Y], [col2X, row1Y], [col1X, row2Y], [col2X, row2Y]];
+		oppCoords = [
+			[col1X, row1Y],
+			[col2X, row1Y],
+			[col1X, row2Y],
+			[col2X, row2Y],
+		];
 	}
 
 	for (let i = 0; i < Math.min(oppCoords.length, opponents.length); i++) {

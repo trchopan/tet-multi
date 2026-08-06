@@ -336,8 +336,8 @@ describe('UnifiedInputController', () => {
 
 		const controller = new UnifiedInputController(
 			[
-				{ action: 'left', label: 'Move Left', defaultKeys: ['ArrowLeft'] },
-				{ action: 'button_a', label: 'Hard Drop', defaultKeys: ['a', 'A'] },
+				{ action: 'left', label: 'Move Left', defaultKeys: ['ArrowLeft', 'a'] },
+				{ action: 'button_a', label: 'Hard Drop', defaultKeys: [' ', 'Space'] },
 			],
 			target as unknown as EventTarget,
 			(action) => actions.push(action),
@@ -354,6 +354,9 @@ describe('UnifiedInputController', () => {
 
 		target.dispatch('keyup', 'ArrowLeft');
 		expect(controller.isActionActive('left')).toBe(false);
+
+		expect(target.dispatch('keydown', ' ')).toBe(true);
+		expect(actions).toEqual(['left', 'button_a']);
 
 		controller.dispose();
 	});
@@ -415,4 +418,3 @@ describe('UnifiedInputController', () => {
 		controller.dispose();
 	});
 });
-

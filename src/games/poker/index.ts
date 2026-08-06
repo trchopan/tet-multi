@@ -16,7 +16,7 @@ export const pokerPlugin: GamePlugin = {
 		{
 			action: 'button_a',
 			label: 'Check / Call (A)',
-			defaultKeys: ['a', 'A', 'Space'],
+			defaultKeys: ['a', 'A', 'Space', ' '],
 		},
 		{
 			action: 'button_b',

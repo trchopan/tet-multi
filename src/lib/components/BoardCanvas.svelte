@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { InputAction, PlayerSnapshot } from '../../shared/types';
-	import { KeyboardInput, SwipeInput } from '../client/input';
+	import { SwipeInput } from '../client/input';
 	import {
 		getCanvasMetrics,
 		renderSnapshotBoard,
@@ -19,7 +19,6 @@
 	} = $props();
 	let canvas: HTMLCanvasElement;
 	let metrics = $state<CanvasMetrics>(getCanvasMetrics(0));
-	let keyboardInput: KeyboardInput | undefined;
 	let swipeInput: SwipeInput | undefined;
 
 	onMount(() => {
@@ -54,15 +53,11 @@
 
 	$effect(() => {
 		if (canvas === undefined || !local || onInput === undefined) return;
-		keyboardInput?.dispose();
 		swipeInput?.dispose();
-		keyboardInput = new KeyboardInput(canvas, onInput);
 		swipeInput = new SwipeInput(canvas, onInput);
 		canvas.focus();
 
 		return () => {
-			keyboardInput?.dispose();
-			keyboardInput = undefined;
 			swipeInput?.dispose();
 			swipeInput = undefined;
 		};
