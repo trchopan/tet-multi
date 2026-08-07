@@ -1,5 +1,5 @@
-import type { Card, HandEvaluation, Rank } from '../types';
-import { HandRank } from '../types';
+import type { Card, HandEvaluation, Rank } from '$/games/poker/types';
+import { HandRank } from '$/games/poker/types';
 
 const RANK_NAMES: Record<Rank, string> = {
 	14: 'Ace',

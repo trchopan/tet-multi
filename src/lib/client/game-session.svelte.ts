@@ -4,8 +4,8 @@ import {
 	createEngineState,
 	TICK_MS,
 	type GameEngineState,
-} from '../../games/falling-blocks';
-import type { InputAction } from '../../shared/types';
+} from '$/games/falling-blocks';
+import type { InputAction } from '$/shared/types';
 
 const createLocalSeed = (): string =>
 	globalThis.crypto?.randomUUID?.() ?? 'tet-multi-local-seed';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { PokerGameEngine } from '../poker';
+import { PokerGameEngine } from '$/games/poker';
 
 describe('PokerGameEngine', () => {
 	it('initializes match, posts blinds, and deals 2 hole cards per player', () => {

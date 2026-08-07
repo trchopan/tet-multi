@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { ROOM_CODE_ALPHABET } from '../shared/constants';
+import { ROOM_CODE_ALPHABET } from '$/shared/constants';
 import { Room } from './room';
 import { RoomManager } from './room-manager';
 import type { SocketLike } from './session';
-import { validateServerMessage } from '../shared/protocol';
-import type { GameEngineState } from '../games/falling-blocks';
+import { validateServerMessage } from '$/shared/protocol';
+import type { GameEngineState } from '$/games/falling-blocks';
 import { reconnectTokensEqual } from './session';
 
 class FakeSocket implements SocketLike {

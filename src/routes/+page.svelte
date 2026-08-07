@@ -1,5 +1,5 @@
 <script lang="ts">
-	import HomeForm from '../lib/components/HomeForm.svelte';
+	import HomeForm from '$/lib/components/HomeForm.svelte';
 
 	const create = (): void => {
 		globalThis.location.href = '/room/new';

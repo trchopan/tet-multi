@@ -5,7 +5,7 @@ import type {
 	PLAYER_MATCH_STATES,
 	ROOM_PHASES,
 } from './constants';
-import type { FallingBlocksPlayerSnapshot } from '../games/falling-blocks';
+import type { FallingBlocksPlayerSnapshot } from '$/games/falling-blocks';
 
 export type InputAction = (typeof INPUT_ACTIONS)[number];
 export type RoomPhase = (typeof ROOM_PHASES)[number];

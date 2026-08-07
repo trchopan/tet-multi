@@ -1,6 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { BOARD_INTERNAL_HEIGHT, BOARD_WIDTH } from '../constants';
-import { addGarbage, createEmptyBoard, getCell, setCell } from '../domain/board';
+import {
+	BOARD_INTERNAL_HEIGHT,
+	BOARD_WIDTH,
+} from '$/games/falling-blocks/constants';
+import {
+	addGarbage,
+	createEmptyBoard,
+	getCell,
+	setCell,
+} from '$/games/falling-blocks/domain/board';
 import {
 	cancelIncomingGarbage,
 	cloneEngineState,
@@ -11,14 +19,14 @@ import {
 	resolveReadyGarbage,
 	serializeEngineState,
 	deserializeEngineState,
-} from '../domain/core-engine';
+} from '$/games/falling-blocks/domain/core-engine';
 import {
 	cancelGarbage,
 	createGarbagePacket,
 	enqueueGarbage as enqueuePacket,
 	readyGarbage,
 	type GarbagePacket,
-} from '../domain/garbage';
+} from '$/games/falling-blocks/domain/garbage';
 
 describe('deterministic garbage rules', () => {
 	test('packets activate after exactly thirty fixed ticks', () => {

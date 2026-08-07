@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { evaluate5Cards, evaluateHand } from '../poker';
-import { HandRank, type Card } from '../poker/types';
+import { evaluate5Cards, evaluateHand } from '$/games/poker';
+import { HandRank, type Card } from '$/games/poker/types';
 
 describe('Poker Hand Evaluator', () => {
 	it('evaluates High Card', () => {

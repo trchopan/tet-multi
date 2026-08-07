@@ -2,7 +2,7 @@ import type {
 	ComputerDifficulty,
 	PlayerSnapshot,
 	RoomSnapshot,
-} from '../shared/types';
+} from '$/shared/types';
 
 export type ViewMode = 'per-player-card' | 'shared-canvas' | 'hybrid-table';
 

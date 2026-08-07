@@ -1,4 +1,4 @@
-import type { PlayerSnapshot } from '../../shared/types';
+import type { PlayerSnapshot } from '$/shared/types';
 
 export interface LobbyStartState {
 	canStart: boolean;

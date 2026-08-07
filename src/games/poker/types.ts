@@ -1,4 +1,4 @@
-import type { ComputerDifficulty } from '../../shared/types';
+import type { ComputerDifficulty } from '$/shared/types';
 
 export type Suit = 'spades' | 'hearts' | 'diamonds' | 'clubs';
 export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;

@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-	MAX_INBOUND_MESSAGE_BYTES,
-	PROTOCOL_VERSION,
-} from './constants';
+import { MAX_INBOUND_MESSAGE_BYTES, PROTOCOL_VERSION } from './constants';
 import {
 	decodeClientMessage,
 	encodeServerMessage,

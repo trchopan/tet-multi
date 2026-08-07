@@ -1,10 +1,10 @@
-import { PIECE_KINDS } from '../constants';
-import type { PieceKind } from '../types';
+import { PIECE_KINDS } from '$/games/falling-blocks/constants';
+import type { PieceKind } from '$/games/falling-blocks/types';
 import {
 	createRandomState,
 	nextRandomIndex,
 	type RandomState,
-} from '../../../shared/random';
+} from '$/shared/random';
 
 export interface SevenBagState {
 	seed: string;

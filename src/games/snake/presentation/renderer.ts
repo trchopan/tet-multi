@@ -1,6 +1,6 @@
-import type { RoomSnapshot } from '../../../shared/types';
-import type { RectBounds } from '../../types';
-import type { SnakeGameState } from '../types';
+import type { RoomSnapshot } from '$/shared/types';
+import type { RectBounds } from '$/games/types';
+import type { SnakeGameState } from '$/games/snake/types';
 
 const PLAYER_COLORS = [
 	{ head: '#4ade80', body: '#22c55e' }, // Green

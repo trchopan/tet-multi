@@ -1,4 +1,4 @@
-import type { Card, Rank, Suit } from '../types';
+import type { Card, Rank, Suit } from '$/games/poker/types';
 
 const RANK_LABELS: Record<Rank, string> = {
 	14: 'A',

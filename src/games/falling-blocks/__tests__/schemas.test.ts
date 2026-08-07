@@ -3,8 +3,11 @@ import { safeParse } from 'valibot';
 import {
 	activePieceSchema,
 	fallingBlocksPlayerSnapshotSchema,
-} from '../schemas/schemas';
-import { BOARD_CELL_COUNT, NEXT_PREVIEW_COUNT } from '../constants';
+} from '$/games/falling-blocks/schemas/schemas';
+import {
+	BOARD_CELL_COUNT,
+	NEXT_PREVIEW_COUNT,
+} from '$/games/falling-blocks/constants';
 
 describe('falling-blocks schema validation', () => {
 	test('validates valid active piece', () => {

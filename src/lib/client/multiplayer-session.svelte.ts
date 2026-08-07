@@ -1,4 +1,4 @@
-import { PROTOCOL_VERSION } from '../../shared/constants';
+import { PROTOCOL_VERSION } from '$/shared/constants';
 import type {
 	ComputerDifficulty,
 	ClientMessage,
@@ -6,7 +6,7 @@ import type {
 	PlayerSnapshot,
 	RoomSnapshot,
 	ServerMessage,
-} from '../../shared/types';
+} from '$/shared/types';
 import {
 	INTERPOLATION_DELAY_MS,
 	recordSnapshot,

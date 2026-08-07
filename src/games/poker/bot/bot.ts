@@ -1,7 +1,7 @@
-import type { ComputerDifficulty } from '../../../shared/types';
-import { evaluateHand } from '../domain/evaluator';
-import type { Card, PokerPlayerState, PokerStage } from '../types';
-import { HandRank } from '../types';
+import type { ComputerDifficulty } from '$/shared/types';
+import { evaluateHand } from '$/games/poker/domain/evaluator';
+import type { Card, PokerPlayerState, PokerStage } from '$/games/poker/types';
+import { HandRank } from '$/games/poker/types';
 
 export interface BotDecision {
 	readonly action: 'button_a' | 'button_b' | 'button_x' | 'button_y';

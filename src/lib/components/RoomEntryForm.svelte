@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { validateDisplayName } from '../client/name';
-	import { gameRegistry } from '../../games';
+	import { validateDisplayName } from '$/lib/client/name';
+	import { gameRegistry } from '$/games';
 
 	let {
 		title,

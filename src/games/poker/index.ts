@@ -1,7 +1,7 @@
-import type { GamePlugin } from '../types';
+import type { GamePlugin } from '$/games/types';
 import { PokerGameEngine } from './application/engine';
 import { renderPokerSharedView } from './presentation/renderer';
-import { gameRegistry } from '../registry';
+import { gameRegistry } from '$/games/registry';
 
 export * from './types';
 export * from './application/engine';

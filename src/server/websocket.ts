@@ -1,6 +1,6 @@
-import { decodeClientMessage } from '../shared/protocol';
-import { PROTOCOL_VERSION } from '../shared/constants';
-import type { ClientMessage, ErrorCode, ServerMessage } from '../shared/types';
+import { decodeClientMessage } from '$/shared/protocol';
+import { PROTOCOL_VERSION } from '$/shared/constants';
+import type { ClientMessage, ErrorCode, ServerMessage } from '$/shared/types';
 import { errorMessage, roomErrorMessage, RoomManager } from './room-manager';
 import type { Session, SocketLike } from './session';
 import {

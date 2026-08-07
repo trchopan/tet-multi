@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { TICK_MS } from '../shared/constants';
+import { TICK_MS } from '$/shared/constants';
 import { FixedScheduler } from './scheduler';
 
 describe('fixed simulation scheduler', () => {

@@ -7,13 +7,13 @@ import {
 	MIN_PLAYERS_TO_START,
 	NORMAL_SNAPSHOT_INTERVAL_TICKS,
 	PROTOCOL_VERSION,
-} from '../shared/constants';
-import type { ComputerDifficulty } from '../shared/types';
+} from '$/shared/constants';
+import type { ComputerDifficulty } from '$/shared/types';
 import type {
 	RoomSnapshot,
 	ServerMessage,
 	ClientInputMessage,
-} from '../shared/types';
+} from '$/shared/types';
 import {
 	createReconnectToken,
 	createComputerSession,
@@ -23,7 +23,7 @@ import {
 	type SocketLike,
 } from './session';
 import { sendServerMessage } from './socket-sender';
-import { gameRegistry, type GameEngine } from '../games';
+import { gameRegistry, type GameEngine } from '$/games';
 
 export interface RoomOptions {
 	readonly code: string;

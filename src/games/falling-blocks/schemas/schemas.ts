@@ -15,7 +15,7 @@ import {
 	NEXT_PREVIEW_COUNT,
 	PIECE_KINDS,
 	SNAPSHOT_CELL_VALUES,
-} from '../constants';
+} from '$/games/falling-blocks/constants';
 
 const literals = <const T extends readonly (string | number | boolean)[]>(
 	values: T,

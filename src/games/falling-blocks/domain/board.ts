@@ -4,8 +4,8 @@ import {
 	BOARD_WIDTH,
 	GARBAGE_CELL_VALUE,
 	SNAPSHOT_CELL_VALUES,
-} from '../constants';
-import type { PieceKind } from '../types';
+} from '$/games/falling-blocks/constants';
+import type { PieceKind } from '$/games/falling-blocks/types';
 import { getRotationCells, pieceValue } from './pieces';
 
 export type BoardCell = (typeof SNAPSHOT_CELL_VALUES)[number];

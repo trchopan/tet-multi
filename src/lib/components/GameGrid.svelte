@@ -3,9 +3,9 @@
 		InputAction,
 		PlayerSnapshot,
 		RoomSnapshot,
-	} from '../../shared/types';
-	import { gameRegistry } from '../../games';
-	import { UnifiedInputController } from '../client/input';
+	} from '$/shared/types';
+	import { gameRegistry } from '$/games';
+	import { UnifiedInputController } from '$/lib/client/input';
 	import PlayerCard from './PlayerCard.svelte';
 	import SharedCanvas from './SharedCanvas.svelte';
 	import VirtualGamepad from './VirtualGamepad.svelte';

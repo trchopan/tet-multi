@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { validateDisplayName } from '../name';
+import { validateDisplayName } from '$/lib/client/name';
 
 describe('display-name validation', () => {
 	test('trims and accepts visible names up to 20 code points', () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { PieceKind } from '../../games/falling-blocks';
-	import { getPreviewCellIndexes } from '../client/piece-preview';
-	import { getPieceColor } from '../client/theme';
+	import type { PieceKind } from '$/games/falling-blocks';
+	import { getPreviewCellIndexes } from '$/lib/client/piece-preview';
+	import { getPieceColor } from '$/lib/client/theme';
 
 	let {
 		piece,

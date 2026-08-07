@@ -1,4 +1,4 @@
-import { TICK_MS } from '../shared/constants';
+import { TICK_MS } from '$/shared/constants';
 
 export interface FixedUpdateTarget {
 	fixedUpdate(now: number): void;

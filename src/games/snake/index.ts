@@ -1,7 +1,7 @@
-import type { GamePlugin } from '../types';
+import type { GamePlugin } from '$/games/types';
 import { SnakeGameEngine } from './application/engine';
 import { renderSnakeSharedView } from './presentation/renderer';
-import { gameRegistry } from '../registry';
+import { gameRegistry } from '$/games/registry';
 
 export * from './types';
 export * from './application/engine';

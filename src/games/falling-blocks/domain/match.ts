@@ -1,10 +1,10 @@
-import { BOARD_WIDTH } from '../constants';
+import { BOARD_WIDTH } from '$/games/falling-blocks/constants';
 import { createGarbagePacket, type GarbagePacket } from './garbage';
 import {
 	createRandomState,
 	nextRandomIndex,
 	type RandomState,
-} from '../../../shared/random';
+} from '$/shared/random';
 
 export interface MatchPlayerState {
 	playerId: string;

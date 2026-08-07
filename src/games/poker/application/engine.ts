@@ -2,10 +2,10 @@ import type {
 	GameEngine,
 	PlayerGameSummary,
 	PlayerInputEnvelope,
-} from '../../types';
-import type { ComputerDifficulty } from '../../../shared/types';
-import { decideBotAction } from '../bot/bot';
-import { evaluateHand } from '../domain/evaluator';
+} from '$/games/types';
+import type { ComputerDifficulty } from '$/shared/types';
+import { decideBotAction } from '$/games/poker/bot/bot';
+import { evaluateHand } from '$/games/poker/domain/evaluator';
 import type {
 	Card,
 	PokerGameState,
@@ -14,7 +14,7 @@ import type {
 	Rank,
 	SidePot,
 	Suit,
-} from '../types';
+} from '$/games/poker/types';
 
 function createSeededPRNG(seedStr: string) {
 	let h = 2166136261 >>> 0;

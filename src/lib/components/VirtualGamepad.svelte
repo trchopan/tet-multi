@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { GameControlBinding } from '../../games/types';
-	import type { InputAction } from '../../shared/types';
+	import type { GameControlBinding } from '$/games/types';
+	import type { InputAction } from '$/shared/types';
 
 	let {
 		controls = [],
