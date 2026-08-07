@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { PIECE_KINDS } from '../../../shared/constants';
+import { PIECE_KINDS } from '../constants';
 import { getPieceDefinition, pieceValue } from '../pieces';
 
 describe('tetromino definitions', () => {

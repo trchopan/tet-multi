@@ -1,4 +1,4 @@
-import { BOARD_WIDTH } from '../../shared/constants';
+import { BOARD_WIDTH } from './constants';
 import { createGarbagePacket, type GarbagePacket } from './garbage';
 import {
 	createRandomState,

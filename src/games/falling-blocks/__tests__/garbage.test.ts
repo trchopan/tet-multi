@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { BOARD_INTERNAL_HEIGHT, BOARD_WIDTH } from '../../../shared/constants';
+import { BOARD_INTERNAL_HEIGHT, BOARD_WIDTH } from '../constants';
 import { addGarbage, createEmptyBoard, getCell, setCell } from '../board';
 import {
 	cancelIncomingGarbage,

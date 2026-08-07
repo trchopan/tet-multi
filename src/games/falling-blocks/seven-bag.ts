@@ -1,5 +1,5 @@
-import { PIECE_KINDS } from '../../shared/constants';
-import type { PieceKind } from '../../shared/types';
+import { PIECE_KINDS } from './constants';
+import type { PieceKind } from './types';
 import {
 	createRandomState,
 	nextRandomIndex,

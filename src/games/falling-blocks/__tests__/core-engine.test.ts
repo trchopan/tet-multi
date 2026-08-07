@@ -14,7 +14,7 @@ import {
 	softDrop,
 	serializeEngineState,
 } from '../core-engine';
-import { BOARD_WIDTH } from '../../../shared/constants';
+import { BOARD_WIDTH } from '../constants';
 import { setCell } from '../board';
 
 describe('deterministic engine foundation', () => {

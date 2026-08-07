@@ -5,7 +5,7 @@ import {
 	BOARD_INTERNAL_HEIGHT,
 	BOARD_VISIBLE_HEIGHT,
 	BOARD_WIDTH,
-} from '../../../shared/constants';
+} from '../constants';
 import {
 	boardIndex,
 	canPlacePiece,

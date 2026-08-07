@@ -3,7 +3,7 @@ import {
 	BOARD_INTERNAL_HEIGHT,
 	BOARD_VISIBLE_HEIGHT,
 	BOARD_WIDTH,
-} from '../../shared/constants';
+} from '../../games/falling-blocks/constants';
 import {
 	canPlacePiece,
 	pieceCells,

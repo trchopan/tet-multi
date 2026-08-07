@@ -18,21 +18,17 @@ import {
 	unknown,
 } from 'valibot';
 import {
-	BOARD_CELL_COUNT,
 	COMPUTER_DIFFICULTIES,
 	DISPLAY_NAME_MAX_LENGTH,
 	DISPLAY_NAME_MIN_LENGTH,
 	ERROR_CODES,
 	INPUT_ACTIONS,
 	MAX_PLAYERS_PER_ROOM,
-	NEXT_PREVIEW_COUNT,
-	PIECE_KINDS,
 	PLAYER_MATCH_STATES,
 	PROTOCOL_VERSION,
 	ROOM_CODE_ALPHABET,
 	ROOM_CODE_LENGTH,
 	ROOM_PHASES,
-	SNAPSHOT_CELL_VALUES,
 } from './constants';
 
 const literals = <const T extends readonly (string | number)[]>(values: T) =>
@@ -72,20 +68,11 @@ const roomCode = pipe(
 );
 
 const protocolVersion = literal(PROTOCOL_VERSION);
-const pieceKind = literals(PIECE_KINDS);
 const computerDifficulty = literals(COMPUTER_DIFFICULTIES);
 const inputAction = literals(INPUT_ACTIONS);
 const roomPhase = literals(ROOM_PHASES);
 const playerMatchState = literals(PLAYER_MATCH_STATES);
 const errorCode = literals(ERROR_CODES);
-const boardCellValue = literals(SNAPSHOT_CELL_VALUES);
-
-const activePiece = strictObject({
-	kind: pieceKind,
-	x: pipe(number(), integer()),
-	y: pipe(number(), integer()),
-	rotation: literals([0, 1, 2, 3]),
-});
 
 export const ClientMessageSchema = union([
 	strictObject({
@@ -148,19 +135,19 @@ const playerSnapshot = pipe(
 		matchState: playerMatchState,
 		placement: optional(positiveInteger),
 		eliminatedAtTick: optional(nonNegativeInteger),
-		board: optional(pipe(array(boardCellValue), length(BOARD_CELL_COUNT))),
-		activePiece: optional(activePiece),
-		hold: optional(pieceKind),
-		next: optional(pipe(array(pieceKind), length(NEXT_PREVIEW_COUNT))),
 		score: optional(nonNegativeInteger),
-		lines: optional(nonNegativeInteger),
-		level: optional(nonNegativeInteger),
-		combo: optional(pipe(number(), integer())),
-		maxCombo: optional(pipe(number(), integer())),
-		backToBack: optional(boolean()),
-		attackSent: optional(nonNegativeInteger),
-		incomingGarbage: optional(nonNegativeInteger),
-		lastProcessedInput: optional(nonNegativeInteger),
+		board: optional(unknown()),
+		activePiece: optional(unknown()),
+		hold: optional(unknown()),
+		next: optional(unknown()),
+		lines: optional(unknown()),
+		level: optional(unknown()),
+		combo: optional(unknown()),
+		maxCombo: optional(unknown()),
+		backToBack: optional(unknown()),
+		attackSent: optional(unknown()),
+		incomingGarbage: optional(unknown()),
+		lastProcessedInput: optional(unknown()),
 	}),
 	check(
 		(player) =>
