@@ -512,32 +512,10 @@ export class Room {
 				.getPlayerSummaries()
 				.get(session.playerId);
 			if (summary) {
-				if (summary.score !== undefined) snapshot.score = summary.score;
-				if (summary.placement !== undefined)
-					snapshot.placement = summary.placement;
-				if (summary.eliminatedAtTick !== undefined)
-					snapshot.eliminatedAtTick = summary.eliminatedAtTick;
-				if (summary.board !== undefined) snapshot.board = summary.board;
-				if (summary.activePiece !== undefined)
-					snapshot.activePiece = summary.activePiece;
-				if (summary.hold !== undefined) snapshot.hold = summary.hold;
-				if (summary.next !== undefined) snapshot.next = summary.next;
-				if (summary.lines !== undefined) snapshot.lines = summary.lines;
-				if (summary.level !== undefined) snapshot.level = summary.level;
-				if (summary.combo !== undefined) snapshot.combo = summary.combo;
-				if (summary.maxCombo !== undefined)
-					snapshot.maxCombo = summary.maxCombo;
-				if (summary.backToBack !== undefined)
-					snapshot.backToBack = summary.backToBack;
-				if (summary.attackSent !== undefined)
-					snapshot.attackSent = summary.attackSent;
-				if (summary.incomingGarbage !== undefined)
-					snapshot.incomingGarbage = summary.incomingGarbage;
-				if (summary.lastProcessedInput !== undefined)
-					snapshot.lastProcessedInput = summary.lastProcessedInput;
+				Object.assign(snapshot, summary);
 			}
 		}
-		if (snapshot.lastProcessedInput === undefined) {
+		if (typeof snapshot.lastProcessedInput !== 'number') {
 			snapshot.lastProcessedInput =
 				this.lastProcessedInput.get(session.playerId) ?? 0;
 		}

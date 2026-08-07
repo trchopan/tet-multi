@@ -5,6 +5,7 @@ import {
 	integer,
 	literal,
 	length,
+	looseObject,
 	maxLength,
 	minLength,
 	minValue,
@@ -22,7 +23,6 @@ import {
 	DISPLAY_NAME_MAX_LENGTH,
 	DISPLAY_NAME_MIN_LENGTH,
 	ERROR_CODES,
-	INPUT_ACTIONS,
 	MAX_PLAYERS_PER_ROOM,
 	PLAYER_MATCH_STATES,
 	PROTOCOL_VERSION,
@@ -69,7 +69,7 @@ const roomCode = pipe(
 
 const protocolVersion = literal(PROTOCOL_VERSION);
 const computerDifficulty = literals(COMPUTER_DIFFICULTIES);
-const inputAction = literals(INPUT_ACTIONS);
+const inputAction = pipe(nonEmptyString, maxLength(64));
 const roomPhase = literals(ROOM_PHASES);
 const playerMatchState = literals(PLAYER_MATCH_STATES);
 const errorCode = literals(ERROR_CODES);
@@ -122,7 +122,7 @@ export const ClientMessageSchema = union([
 ]);
 
 const playerSnapshot = pipe(
-	strictObject({
+	looseObject({
 		playerId: identifier,
 		displayName,
 		shortId: identifier,
@@ -136,18 +136,8 @@ const playerSnapshot = pipe(
 		placement: optional(positiveInteger),
 		eliminatedAtTick: optional(nonNegativeInteger),
 		score: optional(nonNegativeInteger),
-		board: optional(unknown()),
-		activePiece: optional(unknown()),
-		hold: optional(unknown()),
-		next: optional(unknown()),
-		lines: optional(unknown()),
-		level: optional(unknown()),
-		combo: optional(unknown()),
-		maxCombo: optional(unknown()),
-		backToBack: optional(unknown()),
-		attackSent: optional(unknown()),
-		incomingGarbage: optional(unknown()),
-		lastProcessedInput: optional(unknown()),
+		lastProcessedInput: optional(nonNegativeInteger),
+		customState: optional(unknown()),
 	}),
 	check(
 		(player) =>

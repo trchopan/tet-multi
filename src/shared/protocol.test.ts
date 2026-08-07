@@ -58,6 +58,20 @@ describe('shared protocol', () => {
 		}
 	});
 
+	test('accepts game-specific custom input actions', () => {
+		for (const action of ['fold', 'check', 'call', 'raise', 'button_a']) {
+			const result = decodeClientMessage(
+				JSON.stringify({
+					type: 'input',
+					matchId: 'match-1',
+					sequence: 1,
+					action,
+				}),
+			);
+			expect(result.success).toBe(true);
+		}
+	});
+
 	test('accepts all computer difficulty levels and rejects unknown levels', () => {
 		for (const difficulty of ['beginner', 'challenger', 'legendary']) {
 			expect(

@@ -3,8 +3,12 @@ import {
 	createEngineState,
 	type GameEngineState,
 } from '$/games/falling-blocks';
-import { serializeBoard, type BoardCell } from '$/games/falling-blocks';
-import type { InputAction, PlayerSnapshot } from '$/shared/types';
+import {
+	serializeBoard,
+	type BoardCell,
+	type FallingBlocksPlayerSnapshot as PlayerSnapshot,
+} from '$/games/falling-blocks';
+import type { InputAction } from '$/shared/types';
 
 export interface PendingInput {
 	sequence: number;

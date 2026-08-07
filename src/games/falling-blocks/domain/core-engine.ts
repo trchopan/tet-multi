@@ -362,6 +362,8 @@ export const applyInput = (
 			return true;
 		case 'button_y':
 			return holdPiece(state);
+		default:
+			return false;
 	}
 };
 

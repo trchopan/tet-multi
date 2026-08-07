@@ -4,7 +4,7 @@ import {
 	recordSnapshot,
 	type SnapshotHistory,
 } from '$/lib/client/interpolation';
-import type { PlayerSnapshot } from '$/shared/types';
+import type { FallingBlocksPlayerSnapshot as PlayerSnapshot } from '$/games/falling-blocks';
 
 const snapshot = (y: number, board = Array(240).fill(0)): PlayerSnapshot => ({
 	playerId: 'player-2',

@@ -9,8 +9,8 @@ import {
 	type BoardCell,
 	type ActivePiece,
 	type GameEngineState,
+	type FallingBlocksPlayerSnapshot as PlayerSnapshot,
 } from '$/games/falling-blocks';
-import type { PlayerSnapshot } from '$/shared/types';
 import { PIECE_COLORS } from './theme';
 
 export interface CanvasMetrics {

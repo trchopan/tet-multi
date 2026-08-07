@@ -4,7 +4,7 @@ import {
 	predictionToSnapshot,
 	type PendingInput,
 } from '$/lib/client/prediction';
-import type { PlayerSnapshot } from '$/shared/types';
+import type { FallingBlocksPlayerSnapshot as PlayerSnapshot } from '$/games/falling-blocks';
 
 const player = (): PlayerSnapshot => ({
 	playerId: 'player-1',

@@ -1,3 +1,4 @@
+import type { PlayerSnapshot } from '$/shared/types';
 import type { PIECE_KINDS } from './constants';
 
 export type PieceKind = (typeof PIECE_KINDS)[number];
@@ -9,7 +10,7 @@ export interface ActivePieceSnapshot {
 	rotation: 0 | 1 | 2 | 3;
 }
 
-export interface FallingBlocksPlayerSnapshot {
+export interface FallingBlocksPlayerSnapshot extends PlayerSnapshot {
 	board?: number[];
 	activePiece?: ActivePieceSnapshot;
 	hold?: PieceKind;

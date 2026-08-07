@@ -5,9 +5,8 @@ import type {
 	PLAYER_MATCH_STATES,
 	ROOM_PHASES,
 } from './constants';
-import type { FallingBlocksPlayerSnapshot } from '$/games/falling-blocks';
 
-export type InputAction = (typeof INPUT_ACTIONS)[number];
+export type InputAction = (typeof INPUT_ACTIONS)[number] | string;
 export type RoomPhase = (typeof ROOM_PHASES)[number];
 export type PlayerMatchState = (typeof PLAYER_MATCH_STATES)[number];
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -88,7 +87,7 @@ export type ClientMessage =
 	| ClientLeaveRoomMessage
 	| ClientPingMessage;
 
-export interface PlayerSnapshot extends FallingBlocksPlayerSnapshot {
+export interface PlayerSnapshot {
 	playerId: string;
 	displayName: string;
 	shortId: string;
@@ -101,6 +100,10 @@ export interface PlayerSnapshot extends FallingBlocksPlayerSnapshot {
 	matchState: PlayerMatchState;
 	placement?: number;
 	eliminatedAtTick?: number;
+	score?: number;
+	lastProcessedInput?: number;
+	customState?: unknown;
+	[key: string]: unknown;
 }
 
 export interface RoomSnapshot {
