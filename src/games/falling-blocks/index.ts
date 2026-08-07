@@ -1,5 +1,13 @@
 import type { GamePlugin } from '../types';
-import { FallingBlocksGameEngine } from './engine';
+import { FallingBlocksGameEngine } from './application/engine';
+
+export * from './constants';
+export * from './types';
+export * from './schemas/schemas';
+export * from './application/engine';
+export * from './domain/core-engine';
+export * from './domain/board';
+export * from './domain/pieces';
 import {
 	getCanvasMetrics,
 	renderSnapshotBoard,

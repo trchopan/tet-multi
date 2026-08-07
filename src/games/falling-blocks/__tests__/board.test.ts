@@ -15,7 +15,7 @@ import {
 	placePiece,
 	serializeBoard,
 	setCell,
-} from '../board';
+} from '../domain/board';
 
 describe('board foundation', () => {
 	test('uses the specified internal dimensions and hidden rows', () => {

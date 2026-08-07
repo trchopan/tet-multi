@@ -13,9 +13,9 @@ import {
 	holdPiece,
 	softDrop,
 	serializeEngineState,
-} from '../core-engine';
+} from '../domain/core-engine';
 import { BOARD_WIDTH } from '../constants';
-import { setCell } from '../board';
+import { setCell } from '../domain/board';
 
 describe('deterministic engine foundation', () => {
 	test('same seed, roster, and inputs produce the same hash', () => {

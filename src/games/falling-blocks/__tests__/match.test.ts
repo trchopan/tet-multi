@@ -6,7 +6,7 @@ import {
 	eliminatePlayers,
 	hashMatchState,
 	retargetAttackPackets,
-} from '../match';
+} from '../domain/match';
 
 describe('competitive match rules', () => {
 	test('target and hole selection are deterministic', () => {

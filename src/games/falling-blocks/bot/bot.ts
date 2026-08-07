@@ -2,11 +2,11 @@ import {
 	applyInput,
 	cloneEngineState,
 	type GameEngineState,
-} from './core-engine';
-import { getRotationCells, type PieceRotation } from './pieces';
-import { canPlacePiece } from './board';
-import { DEFAULT_COMPUTER_DIFFICULTY } from '../../shared/constants';
-import type { ComputerDifficulty, InputAction } from '../../shared/types';
+} from '../domain/core-engine';
+import { getRotationCells, type PieceRotation } from '../domain/pieces';
+import { canPlacePiece } from '../domain/board';
+import { DEFAULT_COMPUTER_DIFFICULTY } from '../../../shared/constants';
+import type { ComputerDifficulty, InputAction } from '../../../shared/types';
 
 interface BotProfile {
 	minimumReactionTicks: number;

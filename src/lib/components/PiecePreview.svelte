@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { PieceKind } from '../../games/falling-blocks/types';
+	import type { PieceKind } from '../../games/falling-blocks';
 	import { getPreviewCellIndexes } from '../client/piece-preview';
 	import { getPieceColor } from '../client/theme';
 

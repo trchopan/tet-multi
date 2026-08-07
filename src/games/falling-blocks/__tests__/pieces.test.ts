@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { PIECE_KINDS } from '../constants';
-import { getPieceDefinition, pieceValue } from '../pieces';
+import { getPieceDefinition, pieceValue } from '../domain/pieces';
 
 describe('tetromino definitions', () => {
 	test('defines four cells, numeric values, and legal spawn positions', () => {

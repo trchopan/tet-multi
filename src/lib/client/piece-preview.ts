@@ -1,5 +1,4 @@
-import { getRotationCells } from '../../games/falling-blocks/pieces';
-import type { PieceKind } from '../../games/falling-blocks/types';
+import { getRotationCells, type PieceKind } from '../../games/falling-blocks';
 
 const PREVIEW_WIDTH = 4;
 

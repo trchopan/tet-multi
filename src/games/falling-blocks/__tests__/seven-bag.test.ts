@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { PIECE_KINDS } from '../constants';
-import { createSevenBag, drawPiece } from '../seven-bag';
+import { createSevenBag, drawPiece } from '../domain/seven-bag';
 
 const draw = (seed: string, rosterIndex: number, count: number) => {
 	const bag = createSevenBag(seed, rosterIndex);

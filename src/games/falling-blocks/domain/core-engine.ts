@@ -4,9 +4,9 @@ import {
 	BOARD_WIDTH,
 	NEXT_PREVIEW_COUNT,
 	SNAPSHOT_CELL_VALUES,
-} from './constants';
-import type { InputAction } from '../../shared/types';
-import type { PieceKind } from './types';
+} from '../constants';
+import type { InputAction } from '../../../shared/types';
+import type { PieceKind } from '../types';
 import {
 	canPlacePiece,
 	clearLines,

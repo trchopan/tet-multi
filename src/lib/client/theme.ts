@@ -1,4 +1,4 @@
-import type { PieceKind } from '../../games/falling-blocks/types';
+import type { PieceKind } from '../../games/falling-blocks';
 
 export const PIECE_COLORS: readonly string[] = [
 	'#10121c',

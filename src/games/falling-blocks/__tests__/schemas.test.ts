@@ -3,7 +3,7 @@ import { safeParse } from 'valibot';
 import {
 	activePieceSchema,
 	fallingBlocksPlayerSnapshotSchema,
-} from '../schemas';
+} from '../schemas/schemas';
 import { BOARD_CELL_COUNT, NEXT_PREVIEW_COUNT } from '../constants';
 
 describe('falling-blocks schema validation', () => {

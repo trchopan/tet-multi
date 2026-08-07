@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { BOARD_INTERNAL_HEIGHT, BOARD_WIDTH } from '../constants';
-import { addGarbage, createEmptyBoard, getCell, setCell } from '../board';
+import { addGarbage, createEmptyBoard, getCell, setCell } from '../domain/board';
 import {
 	cancelIncomingGarbage,
 	cloneEngineState,
@@ -11,14 +11,14 @@ import {
 	resolveReadyGarbage,
 	serializeEngineState,
 	deserializeEngineState,
-} from '../core-engine';
+} from '../domain/core-engine';
 import {
 	cancelGarbage,
 	createGarbagePacket,
 	enqueueGarbage as enqueuePacket,
 	readyGarbage,
 	type GarbagePacket,
-} from '../garbage';
+} from '../domain/garbage';
 
 describe('deterministic garbage rules', () => {
 	test('packets activate after exactly thirty fixed ticks', () => {

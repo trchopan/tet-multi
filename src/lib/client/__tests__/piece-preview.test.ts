@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { PIECE_KINDS } from '../../../games/falling-blocks/constants';
+import { PIECE_KINDS } from '../../../games/falling-blocks';
 import { getPreviewCellIndexes } from '../piece-preview';
 import { getPieceColor, PIECE_COLORS } from '../theme';
 

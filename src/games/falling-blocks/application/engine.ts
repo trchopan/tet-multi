@@ -3,7 +3,7 @@ import type {
 	GameEngine,
 	PlayerGameSummary,
 	PlayerInputEnvelope,
-} from '../types';
+} from '../../types';
 import {
 	createEngineState,
 	applyInput,
@@ -13,7 +13,7 @@ import {
 	enqueueGarbagePacket,
 	resolveReadyGarbage,
 	type GameEngineState,
-} from './core-engine';
+} from '../domain/core-engine';
 import {
 	createAttackPacket,
 	createMatchState,
@@ -21,15 +21,15 @@ import {
 	retargetAttackPackets,
 	type AttackPacket,
 	type MatchState,
-} from './match';
+} from '../domain/match';
 import {
 	createBotController,
 	invalidateBotPlan,
 	nextBotAction,
 	type BotController,
-} from './bot';
-import { serializeBoard } from './board';
-import type { InputAction } from '../../shared/types';
+} from '../bot/bot';
+import { serializeBoard } from '../domain/board';
+import type { InputAction } from '../../../shared/types';
 
 export class FallingBlocksGameEngine implements GameEngine<
 	unknown,

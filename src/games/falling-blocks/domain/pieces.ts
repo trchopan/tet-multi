@@ -1,5 +1,5 @@
-import { PIECE_KINDS } from './constants';
-import type { PieceKind } from './types';
+import { PIECE_KINDS } from '../constants';
+import type { PieceKind } from '../types';
 
 export type PieceValue = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type PieceRotation = 0 | 1 | 2 | 3;

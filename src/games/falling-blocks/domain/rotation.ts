@@ -1,4 +1,4 @@
-import type { PieceKind } from './types';
+import type { PieceKind } from '../types';
 import type { PieceRotation } from './pieces';
 
 export type Kick = readonly [number, number];

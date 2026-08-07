@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { SnakeGameEngine } from '../snake/engine';
-import { createSnakeBotController, nextSnakeBotAction } from '../snake/bot';
+import { SnakeGameEngine } from '../snake';
+import { createSnakeBotController, nextSnakeBotAction } from '../snake/bot/bot';
 import type { EngineInitPlayer } from '../types';
 import type { SnakeGameState } from '../snake/types';
 

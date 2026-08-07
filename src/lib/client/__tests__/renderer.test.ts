@@ -3,12 +3,10 @@ import {
 	BOARD_HIDDEN_HEIGHT,
 	BOARD_VISIBLE_HEIGHT,
 	BOARD_WIDTH,
-} from '../../../games/falling-blocks/constants';
-import {
 	cloneEngineState,
 	createEngineState,
 	hashEngineState,
-} from '../../../games/falling-blocks/core-engine';
+} from '../../../games/falling-blocks';
 import {
 	getCanvasMetrics,
 	getGhostPosition,

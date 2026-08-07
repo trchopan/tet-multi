@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { evaluate5Cards, evaluateHand } from '../poker/evaluator';
+import { evaluate5Cards, evaluateHand } from '../poker';
 import { HandRank, type Card } from '../poker/types';
 
 describe('Poker Hand Evaluator', () => {

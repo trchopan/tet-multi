@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { SnakeGameEngine, getSnakeSize } from '../snake/engine';
+import { SnakeGameEngine, getSnakeSize } from '../snake';
 
 describe('Snake Arena Engine', () => {
 	const players = [

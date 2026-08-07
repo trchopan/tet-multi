@@ -3,13 +3,13 @@ import type {
 	SnakeDirection,
 	SnakeGameState,
 	SnakeInputAction,
-} from './types';
-import type { ComputerDifficulty } from '../../shared/types';
+} from '../types';
+import type { ComputerDifficulty } from '../../../shared/types';
 import {
 	createRandomState,
 	nextRandom,
 	type RandomState,
-} from '../../shared/random';
+} from '../../../shared/random';
 
 const GRID_WIDTH = 40;
 const GRID_HEIGHT = 30;

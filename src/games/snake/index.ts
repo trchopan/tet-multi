@@ -1,7 +1,10 @@
 import type { GamePlugin } from '../types';
-import { SnakeGameEngine } from './engine';
-import { renderSnakeSharedView } from './renderer';
+import { SnakeGameEngine } from './application/engine';
+import { renderSnakeSharedView } from './presentation/renderer';
 import { gameRegistry } from '../registry';
+
+export * from './types';
+export * from './application/engine';
 
 export const snakePlugin: GamePlugin = {
 	id: 'snake',
