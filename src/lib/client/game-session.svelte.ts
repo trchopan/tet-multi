@@ -3,9 +3,9 @@ import {
 	advanceTicks,
 	createEngineState,
 	TICK_MS,
-} from '../../games/falling-blocks/core-engine';
-import type { GameEngineState } from '../../games/falling-blocks/core-engine';
-import type { InputAction } from '../../shared/types';
+	type GameEngineState,
+} from '$/games/falling-blocks';
+import type { InputAction } from '$/shared/types';
 
 const createLocalSeed = (): string =>
 	globalThis.crypto?.randomUUID?.() ?? 'tet-multi-local-seed';

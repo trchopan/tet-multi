@@ -2,7 +2,7 @@ import type {
 	ComputerDifficulty,
 	PlayerSnapshot,
 	RoomSnapshot,
-} from '../shared/types';
+} from '$/shared/types';
 
 export type ViewMode = 'per-player-card' | 'shared-canvas' | 'hybrid-table';
 
@@ -24,18 +24,8 @@ export interface PlayerGameSummary {
 	readonly score: number;
 	readonly placement?: number | undefined;
 	readonly eliminatedAtTick?: number | undefined;
-	readonly board?: number[] | undefined;
-	readonly activePiece?: PlayerSnapshot['activePiece'] | undefined;
-	readonly hold?: PlayerSnapshot['hold'] | undefined;
-	readonly next?: PlayerSnapshot['next'] | undefined;
-	readonly lines?: number | undefined;
-	readonly level?: number | undefined;
-	readonly combo?: number | undefined;
-	readonly maxCombo?: number | undefined;
-	readonly backToBack?: boolean | undefined;
-	readonly attackSent?: number | undefined;
-	readonly incomingGarbage?: number | undefined;
-	readonly lastProcessedInput?: number | undefined;
+	readonly customState?: unknown | undefined;
+	readonly [key: string]: unknown;
 }
 
 export interface EngineInitPlayer {

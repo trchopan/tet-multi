@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { PIECE_KINDS } from '../../../shared/constants';
-import { getPieceDefinition, pieceValue } from '../pieces';
+import { PIECE_KINDS } from '$/games/falling-blocks/constants';
+import {
+	getPieceDefinition,
+	pieceValue,
+} from '$/games/falling-blocks/domain/pieces';
 
 describe('tetromino definitions', () => {
 	test('defines four cells, numeric values, and legal spawn positions', () => {

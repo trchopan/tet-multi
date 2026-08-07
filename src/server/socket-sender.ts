@@ -1,5 +1,5 @@
-import { encodeServerMessage } from '../shared/protocol';
-import type { ServerMessage } from '../shared/types';
+import { encodeServerMessage } from '$/shared/protocol';
+import type { ServerMessage } from '$/shared/types';
 import type { SocketLike } from './session';
 
 const MAX_CRITICAL_MESSAGES = 32;

@@ -1,7 +1,11 @@
-import type { GamePlugin } from '../types';
-import { PokerGameEngine } from './engine';
-import { renderPokerSharedView } from './renderer';
-import { gameRegistry } from '../registry';
+import type { GamePlugin } from '$/games/types';
+import { PokerGameEngine } from './application/engine';
+import { renderPokerSharedView } from './presentation/renderer';
+import { gameRegistry } from '$/games/registry';
+
+export * from './types';
+export * from './application/engine';
+export * from './domain/evaluator';
 
 export const pokerPlugin: GamePlugin = {
 	id: 'poker',

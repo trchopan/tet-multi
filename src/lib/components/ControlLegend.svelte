@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { GameControlBinding } from '../../games/types';
+	import type { GameControlBinding } from '$/games/types';
 
 	let {
 		controls = [],

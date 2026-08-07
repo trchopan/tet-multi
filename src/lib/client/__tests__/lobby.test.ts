@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { getLobbyStartState } from '../lobby';
-import type { PlayerSnapshot } from '../../../shared/types';
+import { getLobbyStartState } from '$/lib/client/lobby';
+import type { PlayerSnapshot } from '$/shared/types';
 
 const player = (connected: boolean, ready: boolean): PlayerSnapshot => ({
 	playerId: `${connected}-${ready}`,

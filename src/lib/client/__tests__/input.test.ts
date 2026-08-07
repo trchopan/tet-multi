@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import type { InputAction } from '../../../shared/types';
+import type { InputAction } from '$/shared/types';
 import {
 	KeyboardInput,
 	mapKeyToAction,
 	SwipeInput,
 	UnifiedInputController,
 	type PointerEventTarget,
-} from '../input';
+} from '$/lib/client/input';
 
 class FakeTarget {
 	private listeners = new Map<

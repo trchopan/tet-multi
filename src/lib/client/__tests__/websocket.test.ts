@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { MultiplayerWebSocket, type ConnectionState } from '../websocket';
+import {
+	MultiplayerWebSocket,
+	type ConnectionState,
+} from '$/lib/client/websocket';
 
 type Listener = (event: unknown) => void;
 type Timer = { callback: () => void; delay: number; cancelled: boolean };

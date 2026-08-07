@@ -3,24 +3,24 @@ import type {
 	GameEngine,
 	PlayerGameSummary,
 	PlayerInputEnvelope,
-} from '../types';
+} from '$/games/types';
 import type {
 	Position,
 	SnakeDirection,
 	SnakeGameState,
 	SnakeInputAction,
 	SnakePlayerState,
-} from './types';
+} from '$/games/snake/types';
 import {
 	createRandomState,
 	nextRandom,
 	type RandomState,
-} from '../../shared/random';
+} from '$/shared/random';
 import {
 	createSnakeBotController,
 	nextSnakeBotAction,
 	type SnakeBotController,
-} from './bot';
+} from '$/games/snake/bot/bot';
 
 const GRID_WIDTH = 40;
 const GRID_HEIGHT = 30;

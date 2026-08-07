@@ -3,19 +3,17 @@ import {
 	BOARD_HIDDEN_HEIGHT,
 	BOARD_VISIBLE_HEIGHT,
 	BOARD_WIDTH,
-} from '../../../shared/constants';
-import {
 	cloneEngineState,
 	createEngineState,
 	hashEngineState,
-} from '../../../games/falling-blocks/core-engine';
+} from '$/games/falling-blocks';
 import {
 	getCanvasMetrics,
 	getGhostPosition,
 	getVisibleCellRect,
 	snapshotToBoardState,
-} from '../renderer';
-import type { PlayerSnapshot } from '../../../shared/types';
+} from '$/lib/client/renderer';
+import type { PlayerSnapshot } from '$/shared/types';
 
 describe('local canvas renderer geometry', () => {
 	test('uses a 10 by 20 visible board with hidden rows cropped', () => {

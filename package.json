@@ -11,7 +11,7 @@
 		"typecheck": "svelte-kit sync && tsc --noEmit",
 		"lint": "prettier --check README.md CONTRIBUTING.md package.json tsconfig.json svelte.config.js vite.config.ts playwright.config.ts src scripts/*.ts playwright/*.pw.ts",
 		"format": "prettier --write README.md CONTRIBUTING.md package.json tsconfig.json svelte.config.js vite.config.ts playwright.config.ts src scripts/*.ts playwright/*.pw.ts",
-		"test": "bun test src/server src/game src/shared src/lib",
+		"test": "bun test src",
 		"test:watch": "bun test --watch src/server src/game src/shared src/lib",
 		"test:e2e": "bun run scripts/test-e2e.ts",
 		"screenshots": "PLAYWRIGHT_SCREENSHOTS=true bunx playwright test playwright/layout-screenshots.pw.ts --workers=1",

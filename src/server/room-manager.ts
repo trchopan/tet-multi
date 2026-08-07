@@ -1,4 +1,4 @@
-import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from '../shared/constants';
+import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from '$/shared/constants';
 import { Room, RoomError } from './room';
 import { createReconnectToken, type Session, type SocketLike } from './session';
 

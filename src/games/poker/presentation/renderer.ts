@@ -1,8 +1,8 @@
-import type { RoomSnapshot } from '../../shared/types';
-import type { RectBounds } from '../types';
+import type { RoomSnapshot } from '$/shared/types';
+import type { RectBounds } from '$/games/types';
 import { drawCard } from './card-graphics';
-import { evaluateHand } from './evaluator';
-import type { PokerGameState, PokerPlayerState } from './types';
+import { evaluateHand } from '$/games/poker/domain/evaluator';
+import type { PokerGameState, PokerPlayerState } from '$/games/poker/types';
 
 export const renderPokerSharedView = (
 	ctx: CanvasRenderingContext2D,

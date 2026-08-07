@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { gameRegistry } from '../registry';
-import '../falling-blocks';
-import '../snake';
+import { gameRegistry } from '$/games/registry';
+import '$/games/falling-blocks';
+import '$/games/snake';
 
 describe('Game Plugin Registry', () => {
 	test('registers and retrieves Falling Blocks and Snake plugins', () => {

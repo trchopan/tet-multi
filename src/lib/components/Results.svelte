@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { RoomSnapshot } from '../../shared/types';
-	import type { ConnectionState } from '../client/websocket';
+	import type { RoomSnapshot } from '$/shared/types';
+	import type { ConnectionState } from '$/lib/client/websocket';
 
 	let {
 		snapshot,

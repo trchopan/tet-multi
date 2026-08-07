@@ -1,4 +1,4 @@
-import type { PieceKind } from '../../shared/types';
+import type { PieceKind } from '$/games/falling-blocks/types';
 import type { PieceRotation } from './pieces';
 
 export type Kick = readonly [number, number];
