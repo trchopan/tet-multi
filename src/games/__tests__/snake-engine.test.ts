@@ -259,4 +259,74 @@ describe('Snake Arena Engine', () => {
 
 		expect(engine1.getHash()).toBe(engine2.getHash());
 	});
+
+	test('finishes match when all human players are eliminated even with multiple bots remaining', () => {
+		const roster = [
+			{
+				playerId: 'human-1',
+				displayName: 'Human',
+				playerType: 'human' as const,
+			},
+			{
+				playerId: 'bot-1',
+				displayName: 'CPU 1',
+				playerType: 'computer' as const,
+			},
+			{
+				playerId: 'bot-2',
+				displayName: 'CPU 2',
+				playerType: 'computer' as const,
+			},
+		];
+
+		const engine = new SnakeGameEngine('match-human-elim', 'seed-test', roster);
+		expect(engine.isFinished()).toBe(false);
+
+		// Eliminate the human player
+		engine.eliminatePlayers(['human-1']);
+
+		// The match should immediately be finished because no active human players remain
+		expect(engine.isFinished()).toBe(true);
+		expect(engine.getWinners().sort()).toEqual(['bot-1', 'bot-2']);
+	});
+
+	test('continues match while at least one human player is active in a multi-human match with bots', () => {
+		const roster = [
+			{
+				playerId: 'human-1',
+				displayName: 'Human 1',
+				playerType: 'human' as const,
+			},
+			{
+				playerId: 'human-2',
+				displayName: 'Human 2',
+				playerType: 'human' as const,
+			},
+			{
+				playerId: 'bot-1',
+				displayName: 'CPU 1',
+				playerType: 'computer' as const,
+			},
+		];
+
+		const engine = new SnakeGameEngine(
+			'match-multi-human',
+			'seed-test-2',
+			roster,
+		);
+		expect(engine.isFinished()).toBe(false);
+
+		// Eliminate only one human player
+		engine.eliminatePlayers(['human-1']);
+
+		// The match should NOT finish yet because human-2 is still active
+		expect(engine.isFinished()).toBe(false);
+
+		// Eliminate second human player
+		engine.eliminatePlayers(['human-2']);
+
+		// Now the match should finish
+		expect(engine.isFinished()).toBe(true);
+		expect(engine.getWinners()).toEqual(['bot-1']);
+	});
 });
