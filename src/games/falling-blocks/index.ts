@@ -1,10 +1,15 @@
-import type { GamePlugin } from '../types';
-import { FallingBlocksGameEngine } from './engine';
-import {
-	getCanvasMetrics,
-	renderSnapshotBoard,
-} from '../../lib/client/renderer';
-import { gameRegistry } from '../registry';
+import type { GamePlugin } from '$/games/types';
+import { FallingBlocksGameEngine } from './application/engine';
+
+export * from './constants';
+export * from './types';
+export * from './schemas/schemas';
+export * from './application/engine';
+export * from './domain/core-engine';
+export * from './domain/board';
+export * from './domain/pieces';
+import { getCanvasMetrics, renderSnapshotBoard } from '$/lib/client/renderer';
+import { gameRegistry } from '$/games/registry';
 
 export const fallingBlocksPlugin: GamePlugin = {
 	id: 'falling-blocks',

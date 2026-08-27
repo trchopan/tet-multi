@@ -3,12 +3,10 @@ import type {
 	COMPUTER_DIFFICULTIES,
 	INPUT_ACTIONS,
 	PLAYER_MATCH_STATES,
-	PIECE_KINDS,
 	ROOM_PHASES,
 } from './constants';
 
-export type PieceKind = (typeof PIECE_KINDS)[number];
-export type InputAction = (typeof INPUT_ACTIONS)[number];
+export type InputAction = (typeof INPUT_ACTIONS)[number] | string;
 export type RoomPhase = (typeof ROOM_PHASES)[number];
 export type PlayerMatchState = (typeof PLAYER_MATCH_STATES)[number];
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -89,13 +87,6 @@ export type ClientMessage =
 	| ClientLeaveRoomMessage
 	| ClientPingMessage;
 
-export interface ActivePieceSnapshot {
-	kind: PieceKind;
-	x: number;
-	y: number;
-	rotation: 0 | 1 | 2 | 3;
-}
-
 export interface PlayerSnapshot {
 	playerId: string;
 	displayName: string;
@@ -109,19 +100,10 @@ export interface PlayerSnapshot {
 	matchState: PlayerMatchState;
 	placement?: number;
 	eliminatedAtTick?: number;
-	board?: number[];
-	activePiece?: ActivePieceSnapshot;
-	hold?: PieceKind;
-	next?: PieceKind[];
 	score?: number;
-	lines?: number;
-	level?: number;
-	combo?: number;
-	maxCombo?: number;
-	backToBack?: boolean;
-	attackSent?: number;
-	incomingGarbage?: number;
 	lastProcessedInput?: number;
+	customState?: unknown;
+	[key: string]: unknown;
 }
 
 export interface RoomSnapshot {

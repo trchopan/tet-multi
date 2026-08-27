@@ -1,5 +1,5 @@
-import { PIECE_KINDS } from '../../shared/constants';
-import type { PieceKind } from '../../shared/types';
+import { PIECE_KINDS } from '$/games/falling-blocks/constants';
+import type { PieceKind } from '$/games/falling-blocks/types';
 
 export type PieceValue = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type PieceRotation = 0 | 1 | 2 | 3;

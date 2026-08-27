@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { InputAction, PlayerSnapshot } from '../../shared/types';
-	import { SwipeInput } from '../client/input';
+	import type { InputAction, PlayerSnapshot } from '$/shared/types';
+	import { SwipeInput } from '$/lib/client/input';
 	import {
 		getCanvasMetrics,
 		renderSnapshotBoard,
 		type CanvasMetrics,
-	} from '../client/renderer';
+	} from '$/lib/client/renderer';
 
 	let {
 		player,

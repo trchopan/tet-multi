@@ -3,8 +3,8 @@ import {
 	reconcilePrediction,
 	predictionToSnapshot,
 	type PendingInput,
-} from '../prediction';
-import type { PlayerSnapshot } from '../../../shared/types';
+} from '$/lib/client/prediction';
+import type { FallingBlocksPlayerSnapshot as PlayerSnapshot } from '$/games/falling-blocks';
 
 const player = (): PlayerSnapshot => ({
 	playerId: 'player-1',

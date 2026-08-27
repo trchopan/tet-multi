@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { InputAction, PlayerSnapshot } from '../../shared/types';
-	import type { GameControlBinding } from '../../games/types';
-	import { fallingBlocksPlugin } from '../../games/falling-blocks';
+	import type { InputAction, PlayerSnapshot } from '$/shared/types';
+	import type { GameControlBinding } from '$/games/types';
+	import { fallingBlocksPlugin } from '$/games/falling-blocks';
 	import BoardCanvas from './BoardCanvas.svelte';
 	import PiecePreview from './PiecePreview.svelte';
 	import ControlLegend from './ControlLegend.svelte';

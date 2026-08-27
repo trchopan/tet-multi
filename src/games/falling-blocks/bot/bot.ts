@@ -2,11 +2,14 @@ import {
 	applyInput,
 	cloneEngineState,
 	type GameEngineState,
-} from './core-engine';
-import { getRotationCells, type PieceRotation } from './pieces';
-import { canPlacePiece } from './board';
-import { DEFAULT_COMPUTER_DIFFICULTY } from '../../shared/constants';
-import type { ComputerDifficulty, InputAction } from '../../shared/types';
+} from '$/games/falling-blocks/domain/core-engine';
+import {
+	getRotationCells,
+	type PieceRotation,
+} from '$/games/falling-blocks/domain/pieces';
+import { canPlacePiece } from '$/games/falling-blocks/domain/board';
+import { DEFAULT_COMPUTER_DIFFICULTY } from '$/shared/constants';
+import type { ComputerDifficulty, InputAction } from '$/shared/types';
 
 interface BotProfile {
 	minimumReactionTicks: number;

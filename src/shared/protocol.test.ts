@@ -1,9 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-	MAX_INBOUND_MESSAGE_BYTES,
-	NEXT_PREVIEW_COUNT,
-	PROTOCOL_VERSION,
-} from './constants';
+import { MAX_INBOUND_MESSAGE_BYTES, PROTOCOL_VERSION } from './constants';
 import {
 	decodeClientMessage,
 	encodeServerMessage,
@@ -50,8 +46,6 @@ const validSnapshot = {
 			ready: false,
 			isHost: true,
 			matchState: 'waiting',
-			maxCombo: 0,
-			attackSent: 0,
 		},
 	],
 } satisfies RoomSnapshot;
@@ -60,6 +54,20 @@ describe('shared protocol', () => {
 	test('accepts every client message variant', () => {
 		for (const message of validClientMessages) {
 			const result = decodeClientMessage(JSON.stringify(message));
+			expect(result.success).toBe(true);
+		}
+	});
+
+	test('accepts game-specific custom input actions', () => {
+		for (const action of ['fold', 'check', 'call', 'raise', 'button_a']) {
+			const result = decodeClientMessage(
+				JSON.stringify({
+					type: 'input',
+					matchId: 'match-1',
+					sequence: 1,
+					action,
+				}),
+			);
 			expect(result.success).toBe(true);
 		}
 	});
@@ -219,52 +227,8 @@ describe('shared protocol', () => {
 		).toBe(false);
 	});
 
-	test('validates snapshots and rejects malformed boards', () => {
+	test('validates room snapshots', () => {
 		expect(safeParse(RoomSnapshotSchema, validSnapshot).success).toBe(true);
-		expect(
-			safeParse(RoomSnapshotSchema, {
-				...validSnapshot,
-				players: [
-					{
-						...validSnapshot.players[0],
-						next: Array.from({ length: NEXT_PREVIEW_COUNT }, () => 'I'),
-					},
-				],
-			}).success,
-		).toBe(true);
-		expect(
-			safeParse(RoomSnapshotSchema, {
-				...validSnapshot,
-				players: [
-					{
-						...validSnapshot.players[0],
-						next: ['I'],
-					},
-				],
-			}).success,
-		).toBe(false);
-		expect(
-			safeParse(RoomSnapshotSchema, {
-				...validSnapshot,
-				players: [
-					{
-						...validSnapshot.players[0],
-						next: Array.from({ length: NEXT_PREVIEW_COUNT + 1 }, () => 'I'),
-					},
-				],
-			}).success,
-		).toBe(false);
-		expect(
-			safeParse(RoomSnapshotSchema, {
-				...validSnapshot,
-				players: [
-					{
-						...validSnapshot.players[0],
-						board: [0],
-					},
-				],
-			}).success,
-		).toBe(false);
 	});
 
 	test('validates server messages before encoding', () => {

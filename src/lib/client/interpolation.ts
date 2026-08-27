@@ -1,4 +1,4 @@
-import type { PlayerSnapshot } from '../../shared/types';
+import type { FallingBlocksPlayerSnapshot as PlayerSnapshot } from '$/games/falling-blocks';
 
 export const INTERPOLATION_DELAY_MS = 100;
 export const MAX_OPPONENT_EXTRAPOLATION_MS = 150;

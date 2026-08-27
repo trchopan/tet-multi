@@ -1,6 +1,6 @@
-import { validateServerMessage } from '../../shared/protocol';
-import { PROTOCOL_VERSION } from '../../shared/constants';
-import type { ServerMessage } from '../../shared/types';
+import { validateServerMessage } from '$/shared/protocol';
+import { PROTOCOL_VERSION } from '$/shared/constants';
+import type { ServerMessage } from '$/shared/types';
 
 export type ConnectionState =
 	'connecting' | 'connected' | 'reconnecting' | 'stale' | 'closed';

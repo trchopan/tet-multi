@@ -3,8 +3,8 @@ import {
 	canSendGameplayInput,
 	clearReconnectToken,
 	countdownLabel,
-} from '../multiplayer-session.svelte';
-import { reconnectDelay } from '../websocket';
+} from '$/lib/client/multiplayer-session.svelte';
+import { reconnectDelay } from '$/lib/client/websocket';
 
 describe('multiplayer session helpers', () => {
 	test('renders server-time countdown labels deterministically', () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { Room } from '../../server/room';
-import { validateServerMessage } from '../../shared/protocol';
-import { ServerMessageSchema } from '../../shared/schemas';
+import { Room } from '$/server/room';
+import { validateServerMessage } from '$/shared/protocol';
+import { ServerMessageSchema } from '$/shared/schemas';
 import { safeParse } from 'valibot';
 
 describe('Room Poker Protocol Integration', () => {

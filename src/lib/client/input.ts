@@ -1,4 +1,4 @@
-import type { InputAction } from '../../shared/types';
+import type { InputAction } from '$/shared/types';
 
 export const DAS_MS = 140;
 export const ARR_MS = 40;

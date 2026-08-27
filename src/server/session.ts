@@ -1,10 +1,10 @@
 import type { ServerWebSocket } from 'bun';
-import { DEFAULT_COMPUTER_DIFFICULTY } from '../shared/constants';
+import { DEFAULT_COMPUTER_DIFFICULTY } from '$/shared/constants';
 import type {
 	ComputerDifficulty,
 	PlayerMatchState,
 	PlayerType,
-} from '../shared/types';
+} from '$/shared/types';
 
 export interface SocketLike {
 	readonly readyState?: number;

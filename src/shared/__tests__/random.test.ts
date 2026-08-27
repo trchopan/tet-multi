@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { createRandomState, nextRandom, nextRandomIndex } from '../random';
+import {
+	createRandomState,
+	nextRandom,
+	nextRandomIndex,
+} from '$/shared/random';
 
 describe('shared deterministic PRNG', () => {
 	test('same seed and index produce identical numbers', () => {

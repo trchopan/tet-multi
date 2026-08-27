@@ -3,18 +3,14 @@ import {
 	BOARD_INTERNAL_HEIGHT,
 	BOARD_VISIBLE_HEIGHT,
 	BOARD_WIDTH,
-} from '../../shared/constants';
-import {
 	canPlacePiece,
 	pieceCells,
+	pieceValue,
 	type BoardCell,
-} from '../../games/falling-blocks/board';
-import type {
-	ActivePiece,
-	GameEngineState,
-} from '../../games/falling-blocks/core-engine';
-import { pieceValue } from '../../games/falling-blocks/pieces';
-import type { PlayerSnapshot } from '../../shared/types';
+	type ActivePiece,
+	type GameEngineState,
+	type FallingBlocksPlayerSnapshot as PlayerSnapshot,
+} from '$/games/falling-blocks';
 import { PIECE_COLORS } from './theme';
 
 export interface CanvasMetrics {

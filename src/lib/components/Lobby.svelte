@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import type { RoomSnapshot } from '../../shared/types';
+	import type { RoomSnapshot } from '$/shared/types';
 	import {
 		COMPUTER_DIFFICULTIES,
 		MAX_COMPUTER_PLAYERS_PER_ROOM,
 		MAX_PLAYERS_PER_ROOM,
-	} from '../../shared/constants';
-	import type { ComputerDifficulty } from '../../shared/types';
-	import { getLobbyStartState } from '../client/lobby';
+	} from '$/shared/constants';
+	import type { ComputerDifficulty } from '$/shared/types';
+	import { getLobbyStartState } from '$/lib/client/lobby';
 
 	let {
 		snapshot,

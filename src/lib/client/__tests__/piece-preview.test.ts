@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { PIECE_KINDS } from '../../../shared/constants';
-import { getPreviewCellIndexes } from '../piece-preview';
-import { getPieceColor, PIECE_COLORS } from '../theme';
+import { PIECE_KINDS } from '$/games/falling-blocks';
+import { getPreviewCellIndexes } from '$/lib/client/piece-preview';
+import { getPieceColor, PIECE_COLORS } from '$/lib/client/theme';
 
 describe('piece previews', () => {
 	test('normalizes every piece to four filled cells in the 4 by 2 preview', () => {

@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { SnakeGameEngine } from '../snake/engine';
-import { createSnakeBotController, nextSnakeBotAction } from '../snake/bot';
-import type { EngineInitPlayer } from '../types';
-import type { SnakeGameState } from '../snake/types';
+import { SnakeGameEngine } from '$/games/snake';
+import {
+	createSnakeBotController,
+	nextSnakeBotAction,
+} from '$/games/snake/bot/bot';
+import type { EngineInitPlayer } from '$/games/types';
+import type { SnakeGameState } from '$/games/snake/types';
 
 describe('Snake Computer Player Bot', () => {
 	const playersWithComputer: EngineInitPlayer[] = [

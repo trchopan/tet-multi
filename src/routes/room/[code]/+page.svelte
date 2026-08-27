@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import GameGrid from '../../../lib/components/GameGrid.svelte';
-	import Lobby from '../../../lib/components/Lobby.svelte';
-	import RoomEntryForm from '../../../lib/components/RoomEntryForm.svelte';
-	import Results from '../../../lib/components/Results.svelte';
+	import GameGrid from '$/lib/components/GameGrid.svelte';
+	import Lobby from '$/lib/components/Lobby.svelte';
+	import RoomEntryForm from '$/lib/components/RoomEntryForm.svelte';
+	import Results from '$/lib/components/Results.svelte';
 	import {
 		getStoredDisplayName,
 		countdownLabel,
 		MultiplayerSession,
 		saveDisplayName,
-	} from '../../../lib/client/multiplayer-session.svelte';
-	import type { ComputerDifficulty, InputAction } from '../../../shared/types';
+	} from '$/lib/client/multiplayer-session.svelte';
+	import type { ComputerDifficulty, InputAction } from '$/shared/types';
 	import { page } from '$app/state';
 
 	const code = $derived(page.params.code?.toUpperCase() ?? '');

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { InputAction, RoomSnapshot } from '../../shared/types';
-	import { gameRegistry } from '../../games';
-	import { UnifiedInputController } from '../client/input';
+	import type { InputAction, RoomSnapshot } from '$/shared/types';
+	import { gameRegistry } from '$/games';
+	import { UnifiedInputController } from '$/lib/client/input';
 	import VirtualGamepad from './VirtualGamepad.svelte';
 	import ControlLegend from './ControlLegend.svelte';
 

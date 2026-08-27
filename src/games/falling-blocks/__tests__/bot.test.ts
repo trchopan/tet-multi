@@ -8,8 +8,12 @@ import {
 	hashEngineState,
 	resolveReadyGarbage,
 	takeLastPlacement,
-} from '../core-engine';
-import { createBotController, invalidateBotPlan, nextBotAction } from '../bot';
+} from '$/games/falling-blocks/domain/core-engine';
+import {
+	createBotController,
+	invalidateBotPlan,
+	nextBotAction,
+} from '$/games/falling-blocks/bot/bot';
 
 const collectActions = (seed: string): string[] => {
 	const engine = createEngineState(seed, 0);

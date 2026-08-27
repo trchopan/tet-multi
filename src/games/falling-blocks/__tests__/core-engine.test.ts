@@ -13,9 +13,9 @@ import {
 	holdPiece,
 	softDrop,
 	serializeEngineState,
-} from '../core-engine';
-import { BOARD_WIDTH } from '../../../shared/constants';
-import { setCell } from '../board';
+} from '$/games/falling-blocks/domain/core-engine';
+import { BOARD_WIDTH } from '$/games/falling-blocks/constants';
+import { setCell } from '$/games/falling-blocks/domain/board';
 
 describe('deterministic engine foundation', () => {
 	test('same seed, roster, and inputs produce the same hash', () => {
